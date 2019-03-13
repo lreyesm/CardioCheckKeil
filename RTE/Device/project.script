@@ -1,0 +1,4 @@
+load STM32F407VGTx 
+project name STCubeGenerated 
+project toolchain "MDK-ARM V5" 
+project path D:\!!!!keil\f407\ADC_DMA_MultiChannel_ADC_heart_and_Qt_F407\RTE\Device\STM32F407VGTx\ 
