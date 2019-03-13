@@ -384,11 +384,9 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
 	  arm_fir_instance_f32 S;
     arm_status status;
     float32_t  inputF32[ADC_BUFFER_SIZE], outputF32[ADC_BUFFER_SIZE];
-		//q7_t temp_buff_q7[ADC_BUFFER_SIZE];
+
 	  std::uint8_t temp_buff[ADC_BUFFER_SIZE];
 	  std::uint16_t temp_buff_16[ADC_BUFFER_SIZE];
-	  std::uint8_t temp_buff_8[ADC_BUFFER_SIZE];
-	
 	  arm_fir_init_f32(&S, NUM_TAPS, (float32_t *)&fir_coefficient[0], &firState_f32[0], blockSize);
 	
     while(true){
@@ -396,34 +394,22 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
         eventWait(Timer_timer_ADCPeriodic_Complete);
 
         value_adc = adc_value;
-			  ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_8bits
-        //ADC_buffer[ADC_buffer_pos]= (value_adc  << 3) & 0x07FFF;
-			  //ADC_buffer[ADC_buffer_pos]= (value_adc  >> 5);
-			  //temp_buff_8[ADC_buffer_pos] = value_adc >> 4;
+			  ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits
         ADC_buffer_pos++;
-
+			
         if(ADC_buffer_pos >= ADC_BUFFER_SIZE){
 
             ADC_buffer_pos=0;
-//					  for(i=0; i<ADC_BUFFER_SIZE ;++i){
-//                temp_buff_8[i] = ADC_buffer[i] & 0x0FF;
-//            }
-						for(i=0; i<ADC_BUFFER_SIZE ;++i){
-                temp_buff_16[i] = ADC_buffer[i] & 0x07FFF;
-            }
-//					
-					  arm_q15_to_float((q15_t*)&temp_buff_16[0], inputF32, ADC_BUFFER_SIZE);
-						//arm_q7_to_float((q7_t*)&temp_buff_8[0], inputF32, ADC_BUFFER_SIZE);
+
+					  std::memcpy( (uint16_t*)&temp_buff_16[0], (uint16_t*)&ADC_buffer[0], sizeof(ADC_buffer)); //tener cuidado con el tamaño de las transferencias
+					
+					  arm_q15_to_float((q15_t*)&temp_buff_16[0], inputF32, ADC_BUFFER_SIZE);					
 					
 					  arm_fir_f32(&S, inputF32 , outputF32, ADC_BUFFER_SIZE);
 					
 					  arm_float_to_q7(&outputF32[0], (q7_t*)&temp_buff[0], ADC_BUFFER_SIZE);
-					
-            //std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], (uint8_t *)ADC_buffer, ADC_BUFFER_SIZE);
-//					  for(i=0; i<ADC_BUFFER_SIZE ;++i){
-//                ADC_buffer_storage[i + ADC_buffer_storage_pos] = (uint8_t)ADC_buffer[i] & 0x0FF;
-//            }
-					  for(i=0; i<ADC_BUFFER_SIZE ;++i){
+
+						for(i=0; i<ADC_BUFFER_SIZE ;++i){
                 temp_buff[i] = temp_buff[i]<<1;
             }
 					  std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff, ADC_BUFFER_SIZE);
