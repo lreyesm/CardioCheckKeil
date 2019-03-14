@@ -109,6 +109,9 @@ static uint32_t blockSize = BLOCK_SIZE;
 
 /*Main Thread Constructor Generated Code*/
 Main_Thread::Main_Thread():
+    timer_timer_led_green(timeOut_timer_led_green_function, eVirtualTimer::Periodic),
+    timer_timer_led_red(timeOut_timer_led_red_function, eVirtualTimer::Periodic),
+    timer_timer_leds(timeOut_timer_leds_function, eVirtualTimer::Periodic),
     process_Receive_Commands(process_Receive_CommandsRun,eObject::eThread::PriorityNormal ),
     thread_Read_ADC(thread_Read_ADCRun,eObject::eThread::PriorityNormal ),
     thread_Process_CH1(thread_Process_CH1Run,eObject::eThread::PriorityNormal ),
@@ -116,6 +119,7 @@ Main_Thread::Main_Thread():
     timer_timer_ADC(timer_ADC_timeout, eVirtualTimer::Periodic),
     thread_transmit(thread_transmitRun,eObject::eThread::PriorityNormal )
 {
+	  timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
     for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_0[i]=0; if(i<HEADER_SIZE || i>HEADER_END_POS-1){Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;}}
@@ -330,8 +334,8 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
 
         if((receivedSignal & RECEIVE_COMMANDS) == RECEIVE_COMMANDS){
 
-            std::memcpy( read_buff, CH2_read_buffer_0, sizeof(CH2_read_buffer_0));
-					  std::memcpy( read_buff_PC, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
+            std::memcpy( read_buff_PC, CH2_read_buffer_0, sizeof(CH2_read_buffer_0));
+					  std::memcpy( read_buff, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
             init = true;
 					  for(i=0; i<16; i++){
                 if(read_buff_PC[i] != HEADER_ID){
@@ -340,6 +344,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
             }
             if(init){
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
+							  Main_Thread::instance().timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
 							  continue;
             }
 						retransmit = true;
@@ -361,6 +366,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
             }
             if(init){
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
+							  Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
 							  continue;
             }
 						retransmit = true;
@@ -879,4 +885,40 @@ void Main_Thread::timer_ADC_timeout(void const *argument){
 
     ////To wait for this timer timeOut event
     //eventWait(Timer_timer_ADCPeriodic_Complete);
+}
+
+void Main_Thread::timeOut_timer_leds_function(void const *argument){
+
+   ////To set Event For This timer timeOut
+   //Main_Thread::instance().eventSet(Timer_timer_ledsPeriodic_Complete);
+   HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+   ////To start this timer
+   //timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
+
+   ////To wait for this timer timeOut event
+   //eventWait(Timer_timer_ledsPeriodic_Complete);
+}
+
+void Main_Thread::timeOut_timer_led_red_function(void const *argument){
+
+   ////To set Event For This timer timeOut
+   //Main_Thread::instance().eventSet(Timer_timer_led_redPeriodic_Complete);
+   HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+   ////To start this timer
+   //timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
+
+   ////To wait for this timer timeOut event
+   //eventWait(Timer_timer_led_redPeriodic_Complete);
+}
+
+void Main_Thread::timeOut_timer_led_green_function(void const *argument){
+
+   ////To set Event For This timer timeOut
+   //Main_Thread::instance().eventSet(Timer_timer_led_greenPeriodic_Complete);
+   HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+   ////To start this timer
+   //timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
+
+   ////To wait for this timer timeOut event
+   //eventWait(Timer_timer_led_greenPeriodic_Complete);
 }

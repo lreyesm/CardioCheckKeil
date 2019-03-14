@@ -56,6 +56,18 @@ using namespace eObject;
 class Main_Thread:public eObject::eApplicationBase<Main_Thread>
 {
 public:
+    static void timeOut_timer_led_green_function(void const *argument);    /*End of Timer public definitions*/
+    
+    static void timeOut_timer_led_red_function(void const *argument);    /*End of Timer public definitions*/
+    
+    /*Timer public definitions*/
+    enum Timer_Events{
+        Timer_timer_led_greenPeriodic_Complete, /*Put the correct number to the event (binary number 1,2,4,8...)*/
+        Timer_timer_led_redPeriodic_Complete, /*Put the correct number to the event (binary number 1,2,4,8...)*/
+        Timer_timer_ledsPeriodic_Complete /*Put the correct number to the event (binary number 1,2,4,8...)*/    };
+
+    static void timeOut_timer_leds_function(void const *argument);    /*End of Timer public definitions*/
+    
    static const std::uint16_t INIT_PROCESS_CH0_HALF = eObject::eThread::EventFlag2; // me salte una pila de flags y puse #23 preguntar a tony por esto
     
    static const std::uint16_t INIT_PROCESS_CH0_FULL = eObject::eThread::EventFlag3;
@@ -140,6 +152,18 @@ typedef enum{
     void process_9A_buff_CH1(std::uint8_t function_value);
 
 private:
+    eVirtualTimer timer_timer_led_green;
+
+    static const std::uint32_t TIMER_timer_led_green_PERIOD_MS = 1000;
+
+    eVirtualTimer timer_timer_led_red;
+
+    static const std::uint32_t TIMER_timer_led_red_PERIOD_MS = 1000;
+
+    eVirtualTimer timer_timer_leds;
+
+    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 1000;
+
     eVirtualTimer timer_timer_ADC;
 
     static const std::uint32_t TIMER_timer_ADC_PERIOD_MS = TIMER_TIMEOUT_ADC_READ;
