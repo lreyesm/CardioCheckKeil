@@ -49,7 +49,9 @@ const uint32_t crc32_tab[] = {
 Main_Thread::BUFFER_StateTypeDef Main_Thread::buffer_transmit = BUFFER_TRANSMIT_0;
 
 bool Main_Thread::CH0_Ready = false;
+bool Main_Thread::CH0_init_Ready = false;
 bool Main_Thread::CH1_Ready = false;
+bool Main_Thread::CH1_init_Ready = false;
 bool Main_Thread::ADC_Ready = false;
 bool Main_Thread::start_transmit_ftdi = false;
 bool Main_Thread::start_transmit_bluetooth = false;
@@ -62,7 +64,12 @@ std::uint8_t Main_Thread::CH2_read_buffer_0[16];
 std::uint8_t Main_Thread::CH3_read_buffer_0[16];
 
 std::uint8_t Main_Thread::CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
+std::uint8_t Main_Thread::CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
+std::uint32_t Main_Thread::CH0_function_buffer_storage_pos=0;
+
 std::uint8_t Main_Thread::CH1_function_buffer_0[FUNCTION_BUFFER_SIZE];
+std::uint8_t Main_Thread::CH1_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
+std::uint32_t Main_Thread::CH1_function_buffer_storage_pos=0;
 
 std::uint8_t Main_Thread::CH0_processsing_buffer_0[UART_READ_BUFFER_SIZE/2];
 std::uint8_t Main_Thread::CH0_processsing_buffer_1[UART_READ_BUFFER_SIZE/2];
@@ -86,25 +93,25 @@ std::uint32_t Main_Thread::ADC_buffer_pos=0;
 std::uint32_t Main_Thread::ADC_buffer_storage_pos=0;
 
 const float32_t fir_coefficient[NUM_TAPS]={
-	
-	+0.00079608606945910762 , -0.001031330106504409  , -0.0032902656216684477  , -0.00376410753997351   ,  + 0.0010113988168697146 ,
-	+0.010490031988576395   ,  +0.01595748850158794     ,  +0.0055140408324335644   , -0.022078544154868061    , -0.047050338945306115  , 
-	-0.03599573649009815 ,	+0.032939702078991037  ,  +0.14578901832542709   ,  +0.2525245041074593 , +0.29637610427522909  ,
-	+0.2525245041074593    ,   +0.14578901832542709   , +0.032939702078991037  , -0.03599573649009815   , -0.047050338945306115  ,
-	-0.022078544154868061  , +0.0055140408324335644 , +0.01595748850158794 ,  +0.010490031988576395  , + 0.0010113988168697146 ,
-	-0.00376410753997351   , -0.0032902656216684477 , -0.001031330106504409  , + 0.00079608606945910762
+
+    +0.00079608606945910762 , -0.001031330106504409  , -0.0032902656216684477  , -0.00376410753997351   ,  + 0.0010113988168697146 ,
+    +0.010490031988576395   ,  +0.01595748850158794     ,  +0.0055140408324335644   , -0.022078544154868061    , -0.047050338945306115  ,
+    -0.03599573649009815 ,	+0.032939702078991037  ,  +0.14578901832542709   ,  +0.2525245041074593 , +0.29637610427522909  ,
+    +0.2525245041074593    ,   +0.14578901832542709   , +0.032939702078991037  , -0.03599573649009815   , -0.047050338945306115  ,
+    -0.022078544154868061  , +0.0055140408324335644 , +0.01595748850158794 ,  +0.010490031988576395  , + 0.0010113988168697146 ,
+    -0.00376410753997351   , -0.0032902656216684477 , -0.001031330106504409  , + 0.00079608606945910762
 }; 
 
 const float32_t fir_coefficient_250Hz_Order10[NUM_TAPS]={
-	
-	-0.005218989906672902 , -0.0074937206692433722,  0.01493805854856124  ,  0.10685006477929745 ,  0.23896227610234308  ,
-	 0.30392462229142903  ,  0.23896227610234308  ,  0.10685006477929745  , 0.01493805854856124  , -0.0074937206692433722, -0.005218989906672902 
+
+    -0.005218989906672902 , -0.0074937206692433722,  0.01493805854856124  ,  0.10685006477929745 ,  0.23896227610234308  ,
+    0.30392462229142903  ,  0.23896227610234308  ,  0.10685006477929745  , 0.01493805854856124  , -0.0074937206692433722, -0.005218989906672902
 };
 
 const float32_t fir_coefficient_500Hz[NUM_TAPS]={
-	
-	 +0.0053145402913309919 , +0.018327611671120649  , +0.059495137562790477  , +0.12457336692876832   ,  +0.18635946467144601  ,
-	 +0.21185975774908705  ,  +0.18635946467144601  , +0.12457336692876832  , +0.059495137562790477  , +0.018327611671120649  , +0.0053145402913309919
+
+    +0.0053145402913309919 , +0.018327611671120649  , +0.059495137562790477  , +0.12457336692876832   ,  +0.18635946467144601  ,
+    +0.21185975774908705  ,  +0.18635946467144601  , +0.12457336692876832  , +0.059495137562790477  , +0.018327611671120649  , +0.0053145402913309919
 };
 
 static float32_t  firState_f32[BLOCK_SIZE + NUM_TAPS - 1];
@@ -122,7 +129,7 @@ Main_Thread::Main_Thread():
     timer_timer_ADC(timer_ADC_timeout, eVirtualTimer::Periodic),
     thread_transmit(thread_transmitRun,eObject::eThread::PriorityNormal )
 {
-	  timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
+    timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
     for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_0[i]=0; if(i<HEADER_SIZE || i>HEADER_END_POS-1){Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;}}
@@ -132,8 +139,8 @@ Main_Thread::Main_Thread():
     Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
 
     process_Receive_Commands.start();
-		HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
-		HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], 16);	
+    HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
+    HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], 16);
 
     thread_Process_CH0.start();
 
@@ -157,16 +164,20 @@ Main_Thread::Main_Thread():
 
 void Main_Thread::process_9A_buff_CH0(std::uint8_t function_value){
 
+    std::uint8_t local_function_value = function_value;
     CH0_function_buffer_0[CH0_buffer_pos] = function_value;
 
-    if(CH0_function_buffer_0[CH0_buffer_pos] > 100 || CH0_function_buffer_0[CH0_buffer_pos] == 100){
+    if(CH0_function_buffer_0[CH0_buffer_pos] > 100){
+        CH0_function_buffer_0[CH0_buffer_pos] = 0;
+    }
+    else if(CH0_function_buffer_0[CH0_buffer_pos] > 98 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
 
-			  if(CH0_buffer_pos == 0){
-				   CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
-				}
-				else{
-           CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[CH0_buffer_pos - 1];
-				}
+        if(CH0_buffer_pos == 0){
+            CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
+        }
+        else{
+            CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[CH0_buffer_pos - 1];
+        }
     }
     CH0_buffer_pos++;
 
@@ -174,28 +185,38 @@ void Main_Thread::process_9A_buff_CH0(std::uint8_t function_value){
 
         CH0_buffer_pos=0;
 
-        if(buffer_transmit == BUFFER_TRANSMIT_0){
-            std::memcpy(&transmit_buffer_1[DATA_GRAPH_FT_INIT_BUFFER_POS], (CH0_function_buffer_0), sizeof(CH0_function_buffer_0));
-        }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-            std::memcpy(&transmit_buffer_0[DATA_GRAPH_FT_INIT_BUFFER_POS], (CH0_function_buffer_0), sizeof(CH0_function_buffer_0));
+        std::memcpy(&CH0_function_buffer_storage_0[CH0_function_buffer_storage_pos], (CH0_function_buffer_0), sizeof(CH0_function_buffer_0));
+        CH0_function_buffer_storage_pos += FUNCTION_BUFFER_SIZE;
+
+        if(CH0_function_buffer_storage_pos >= FUNCTION_BUFFER_STORAGE_SIZE){
+            CH0_function_buffer_storage_pos=0;
+            Main_Thread::instance().CH0_init_Ready = true;
         }
-        Main_Thread::instance().CH0_Ready = true;
-        Main_Thread::instance().eventSet(Main_Thread::INIT_TRANSMIT);
+
+        if(Main_Thread::instance().CH0_init_Ready){
+
+            Main_Thread::instance().CH0_Ready = true;
+            Main_Thread::instance().eventSet(Main_Thread::INIT_TRANSMIT);
+        }
     }
 }
 
 void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
 
+    std::uint8_t local_function_value = function_value;
     CH1_function_buffer_0[CH1_buffer_pos] = function_value;
 
-    if(CH1_function_buffer_0[CH1_buffer_pos] > 100  || CH1_function_buffer_0[CH1_buffer_pos] == 100){
+    if(CH1_function_buffer_0[CH1_buffer_pos] > 100){
+        CH1_function_buffer_0[CH1_buffer_pos] = 0;
+    }
+    else if(CH1_function_buffer_0[CH1_buffer_pos] > 98  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
 
-	      if(CH1_buffer_pos == 0){
-				   CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
-				}
-				else{
-           CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[CH0_buffer_pos - 1];
-				}
+        if(CH1_buffer_pos == 0){
+            CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
+        }
+        else{
+            CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[CH1_buffer_pos - 1];
+        }
     }
 
     CH1_buffer_pos++;
@@ -204,13 +225,19 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
 
         CH1_buffer_pos=0;
 
-        if(buffer_transmit == BUFFER_TRANSMIT_0){
-            std::memcpy(&transmit_buffer_1[DATA_GRAPH_FT_2_INIT_BUFFER_POS], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
-        }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-            std::memcpy(&transmit_buffer_0[DATA_GRAPH_FT_2_INIT_BUFFER_POS], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
+        std::memcpy(&CH1_function_buffer_storage_0[CH1_function_buffer_storage_pos], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
+        CH1_function_buffer_storage_pos += FUNCTION_BUFFER_SIZE;
+
+        if(CH1_function_buffer_storage_pos >= FUNCTION_BUFFER_STORAGE_SIZE){
+            CH1_function_buffer_storage_pos=0;
+            Main_Thread::instance().CH1_init_Ready = true;
         }
-        Main_Thread::instance().CH1_Ready = true;
-        Main_Thread::instance().eventSet(Main_Thread::INIT_TRANSMIT);
+
+        if(Main_Thread::instance().CH1_init_Ready){
+
+            Main_Thread::instance().CH1_Ready = true;
+            Main_Thread::instance().eventSet(Main_Thread::INIT_TRANSMIT);
+        }
     }
 }
 
@@ -241,7 +268,9 @@ void Main_Thread::userLoop()
 
     uint32_t crcValue;
     uint8_t i, buf_8b[4];
-    std::uint32_t pos;
+    std::uint32_t pos =0;
+    std::uint32_t pos_func_buffer_0 =0;
+    std::uint32_t pos_func_buffer_1 =0;
 
     while(true){
         eventWaitAny(signal, osWaitForever);
@@ -250,7 +279,7 @@ void Main_Thread::userLoop()
         if((receivedSignal & INIT_PROGRAM) == INIT_PROGRAM){
             //		#endif
             start_transmit_ftdi = true;
-					  start_transmit_bluetooth = true;
+            start_transmit_bluetooth = true;
         }
 
         if((receivedSignal & INIT_TRANSMIT) == INIT_TRANSMIT){
@@ -260,19 +289,35 @@ void Main_Thread::userLoop()
 
                 if(buffer_transmit == BUFFER_TRANSMIT_0){
 
-//									  if(current_ADC_Buffer == 1){
-//											std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_2[0], ADC_BUFFER_SIZE);
-//										}
-//                    else if(current_ADC_Buffer == 2){
-//										  std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_1[0], ADC_BUFFER_SIZE);
-//										}
-										
-										std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
+                    //									  if(current_ADC_Buffer == 1){
+                    //											std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_2[0], ADC_BUFFER_SIZE);
+                    //										}
+                    //                    else if(current_ADC_Buffer == 2){
+                    //										  std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_1[0], ADC_BUFFER_SIZE);
+                    //										}
+
+                    //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 0--------------------------------------------
+                    std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
 
                     pos+=ADC_BUFFER_SIZE;
                     if(pos >= ADC_BUFFER_STORAGE_SIZE){
                         pos=0;
                     }
+
+                    std::memcpy(&transmit_buffer_0[DATA_GRAPH_FT_INIT_BUFFER_POS], (&CH0_function_buffer_storage_0[pos_func_buffer_0]), FUNCTION_BUFFER_SIZE);
+
+                    pos_func_buffer_0+=FUNCTION_BUFFER_SIZE;
+                    if(pos_func_buffer_0 >= FUNCTION_BUFFER_STORAGE_SIZE){
+                        pos_func_buffer_0=0;
+                    }
+
+                    std::memcpy(&transmit_buffer_0[DATA_GRAPH_FT_2_INIT_BUFFER_POS], (&CH1_function_buffer_storage_0[pos_func_buffer_1]), FUNCTION_BUFFER_SIZE);
+
+                    pos_func_buffer_1+=FUNCTION_BUFFER_SIZE;
+                    if(pos_func_buffer_1 >= FUNCTION_BUFFER_STORAGE_SIZE){
+                        pos_func_buffer_1=0;
+                    }
+                    //-----------------------------------------------------------------------------------------------------------------------
                     transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_0;
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
 
@@ -283,30 +328,48 @@ void Main_Thread::userLoop()
                     std::memcpy( write_buff, transmit_buffer_0, sizeof(transmit_buffer_0));
                     std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
-										if(start_transmit_ftdi){                    
-										  HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
-										}
-										if(start_transmit_bluetooth){  
-										  HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
-										}
-										
+                    if(start_transmit_ftdi){
+                        HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
+                    }
+                    if(start_transmit_bluetooth){
+                        HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
+                    }
+
                     buffer_transmit = BUFFER_TRANSMIT_1;
                 }
                 else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
-//										if(current_ADC_Buffer == 1){
-//											std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_2[0], ADC_BUFFER_SIZE);
-//										}
-//                    else if(current_ADC_Buffer == 2){
-//										  std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_1[0], ADC_BUFFER_SIZE);
-//										}
+                    //										if(current_ADC_Buffer == 1){
+                    //											std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_2[0], ADC_BUFFER_SIZE);
+                    //										}
+                    //                    else if(current_ADC_Buffer == 2){
+                    //										  std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_1[0], ADC_BUFFER_SIZE);
+                    //										}
+
+                    //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 1--------------------------------------------
                     std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
 
                     pos+=ADC_BUFFER_SIZE;
                     if(pos >= ADC_BUFFER_STORAGE_SIZE){
                         pos=0;
                     }
-										transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
+
+                    std::memcpy(&transmit_buffer_1[DATA_GRAPH_FT_INIT_BUFFER_POS], (&CH0_function_buffer_storage_0[pos_func_buffer_0]), FUNCTION_BUFFER_SIZE);
+
+                    pos_func_buffer_0+=FUNCTION_BUFFER_SIZE;
+                    if(pos_func_buffer_0 >= FUNCTION_BUFFER_STORAGE_SIZE){
+                        pos_func_buffer_0=0;
+                    }
+
+                    std::memcpy(&transmit_buffer_1[DATA_GRAPH_FT_2_INIT_BUFFER_POS], (&CH1_function_buffer_storage_0[pos_func_buffer_1]), FUNCTION_BUFFER_SIZE);
+
+                    pos_func_buffer_1+=FUNCTION_BUFFER_SIZE;
+                    if(pos_func_buffer_1 >= FUNCTION_BUFFER_STORAGE_SIZE){
+                        pos_func_buffer_1=0;
+                    }
+                    //-----------------------------------------------------------------------------------------------------------------------
+                    
+                    transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_1, UART_SEND_BUFFER_SIZE);
 
                     for(i=0; i<4 ;++i){
@@ -316,12 +379,12 @@ void Main_Thread::userLoop()
                     std::memcpy( write_buff, transmit_buffer_1, sizeof(transmit_buffer_1));
                     std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
-										if(start_transmit_ftdi){
-										  HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);                     
-										}
-										if(start_transmit_bluetooth){ 
-										  HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
-										}
+                    if(start_transmit_ftdi){
+                        HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
+                    }
+                    if(start_transmit_bluetooth){
+                        HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
+                    }
                     buffer_transmit = BUFFER_TRANSMIT_0;
                 }
             }
@@ -341,7 +404,8 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
     std::int32_t signal = 0;
     eObject::eThread::ThreadEventFlags receivedSignal;
     bool init = true;
-	  bool retransmit = true;
+    bool init_prog = true;
+    bool retransmit = true;
     std::uint8_t read_buff[32], read_buff_PC[32], i;
 
     while(true){
@@ -351,51 +415,71 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
         if((receivedSignal & RECEIVE_COMMANDS) == RECEIVE_COMMANDS){
 
             std::memcpy( read_buff_PC, CH2_read_buffer_0, sizeof(CH2_read_buffer_0));
-					  std::memcpy( read_buff, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
+            std::memcpy( read_buff, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
             init = true;
-					  for(i=0; i<16; i++){
-                if(read_buff_PC[i] != HEADER_ID){
+            init_prog = true;
+
+            for(i=0; i<16; i++){
+                if(read_buff_PC[i] != INIT_PROG_ID){
+                    init_prog = false;
+                }
+            }
+            if(init_prog){
+                 NVIC_SystemReset();
+            }
+            for(i=0; i<16; i++){
+                if(read_buff_PC[i] != INIT_SEND_ID){
                     init = false;
                 }
             }
             if(init){
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
-							  Main_Thread::instance().timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
-							  continue;
+                Main_Thread::instance().timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
+                continue;
             }
-						retransmit = true;
-						for(i=0; i<16; i++){
+            retransmit = true;
+            for(i=0; i<16; i++){
                 if(read_buff_PC[i] != ERROR_ID){
                     retransmit = false;
                 }
             }
-						if(retransmit){
+            if(retransmit){
                 HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
-							  continue;
+                continue;
             }
-						////////////Bluetooth/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-						init = true;
+            ////////////Bluetooth/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            init = true;
+            init_prog = true;
+
             for(i=0; i<16; i++){
-                if(read_buff[i] != HEADER_ID){
+                if(read_buff[i] != INIT_PROG_ID){
+                    init_prog = false;
+                }
+            }
+            if(init_prog){
+                 NVIC_SystemReset();
+            }
+            for(i=0; i<16; i++){
+                if(read_buff[i] != INIT_SEND_ID){
                     init = false;
                 }
             }
             if(init){
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
-							  Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
-							  continue;
+                Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
+                continue;
             }
-						retransmit = true;
-						for(i=0; i<16; i++){
+            retransmit = true;
+            for(i=0; i<16; i++){
                 if(read_buff[i] != ERROR_ID){
                     retransmit = false;
                 }
             }
-						if(retransmit){
+            if(retransmit){
                 HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
-							  continue;
+                continue;
             }
-						/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
     }
 }
@@ -403,53 +487,53 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
 {
     std::uint16_t value_adc, i;
 
-	  arm_fir_instance_f32 S;
+    arm_fir_instance_f32 S;
     arm_status status;
     float32_t  inputF32[ADC_BUFFER_SIZE], outputF32[ADC_BUFFER_SIZE];
 
-	  std::uint8_t temp_buff[ADC_BUFFER_SIZE];
-	  std::uint16_t temp_buff_16[ADC_BUFFER_SIZE];
-	  arm_fir_init_f32(&S, NUM_TAPS, (float32_t *)&fir_coefficient[0], &firState_f32[0], blockSize);
-	
+    std::uint8_t temp_buff[ADC_BUFFER_SIZE];
+    std::uint16_t temp_buff_16[ADC_BUFFER_SIZE];
+    arm_fir_init_f32(&S, NUM_TAPS, (float32_t *)&fir_coefficient[0], &firState_f32[0], blockSize);
+
     while(true){
 
         eventWait(Timer_timer_ADCPeriodic_Complete);
 
         value_adc = adc_value;
-			  ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits
+        ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits
         ADC_buffer_pos++;
-			
+
         if(ADC_buffer_pos >= ADC_BUFFER_SIZE){
 
             ADC_buffer_pos=0;
 
-					  std::memcpy( (uint16_t*)&temp_buff_16[0], (uint16_t*)&ADC_buffer[0], sizeof(ADC_buffer)); //tener cuidado con el tamaño de las transferencias
-					
-					  arm_q15_to_float((q15_t*)&temp_buff_16[0], inputF32, ADC_BUFFER_SIZE);					
-					
-					  arm_fir_f32(&S, inputF32 , outputF32, ADC_BUFFER_SIZE);
-					
-					  arm_float_to_q7(&outputF32[0], (q7_t*)&temp_buff[0], ADC_BUFFER_SIZE);
+            std::memcpy( (uint16_t*)&temp_buff_16[0], (uint16_t*)&ADC_buffer[0], sizeof(ADC_buffer)); //tener cuidado con el tamaño de las transferencias
 
-						for(i=0; i<ADC_BUFFER_SIZE ;++i){
+            arm_q15_to_float((q15_t*)&temp_buff_16[0], inputF32, ADC_BUFFER_SIZE);
+
+            arm_fir_f32(&S, inputF32 , outputF32, ADC_BUFFER_SIZE);
+
+            arm_float_to_q7(&outputF32[0], (q7_t*)&temp_buff[0], ADC_BUFFER_SIZE);
+
+            for(i=0; i<ADC_BUFFER_SIZE ;++i){
                 temp_buff[i] = temp_buff[i]<<1;
             }
-						
-//						if(current_ADC_Buffer == 1){
-//							
-//						  std::memcpy( &ADC_buffer_send_1[0], temp_buff, ADC_BUFFER_SIZE);
-//							
-//							current_ADC_Buffer = 2;
-//						}
-//						else if(current_ADC_Buffer == 2){
-//							
-//						  std::memcpy( &ADC_buffer_send_2[0], temp_buff, ADC_BUFFER_SIZE);
-//							
-//							current_ADC_Buffer = 1;
-//							
-//						}
-//						ADC_Ready = true;
-					  std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff, ADC_BUFFER_SIZE);
+
+            //						if(current_ADC_Buffer == 1){
+            //
+            //						  std::memcpy( &ADC_buffer_send_1[0], temp_buff, ADC_BUFFER_SIZE);
+            //
+            //							current_ADC_Buffer = 2;
+            //						}
+            //						else if(current_ADC_Buffer == 2){
+            //
+            //						  std::memcpy( &ADC_buffer_send_2[0], temp_buff, ADC_BUFFER_SIZE);
+            //
+            //							current_ADC_Buffer = 1;
+            //
+            //						}
+            //						ADC_Ready = true;
+            std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff, ADC_BUFFER_SIZE);
             ADC_buffer_storage_pos+=ADC_BUFFER_SIZE;
             if(ADC_buffer_storage_pos >= ADC_BUFFER_STORAGE_SIZE){
                 ADC_Ready = true;
@@ -920,36 +1004,36 @@ void Main_Thread::timer_ADC_timeout(void const *argument){
 
 void Main_Thread::timeOut_timer_leds_function(void const *argument){
 
-   ////To set Event For This timer timeOut
-   //Main_Thread::instance().eventSet(Timer_timer_ledsPeriodic_Complete);
-   HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
-   ////To start this timer
-   //timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
+    ////To set Event For This timer timeOut
+    //Main_Thread::instance().eventSet(Timer_timer_ledsPeriodic_Complete);
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+    ////To start this timer
+    //timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
 
-   ////To wait for this timer timeOut event
-   //eventWait(Timer_timer_ledsPeriodic_Complete);
+    ////To wait for this timer timeOut event
+    //eventWait(Timer_timer_ledsPeriodic_Complete);
 }
 
 void Main_Thread::timeOut_timer_led_red_function(void const *argument){
 
-   ////To set Event For This timer timeOut
-   //Main_Thread::instance().eventSet(Timer_timer_led_redPeriodic_Complete);
-   HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
-   ////To start this timer
-   //timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
+    ////To set Event For This timer timeOut
+    //Main_Thread::instance().eventSet(Timer_timer_led_redPeriodic_Complete);
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+    ////To start this timer
+    //timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
 
-   ////To wait for this timer timeOut event
-   //eventWait(Timer_timer_led_redPeriodic_Complete);
+    ////To wait for this timer timeOut event
+    //eventWait(Timer_timer_led_redPeriodic_Complete);
 }
 
 void Main_Thread::timeOut_timer_led_green_function(void const *argument){
 
-   ////To set Event For This timer timeOut
-   //Main_Thread::instance().eventSet(Timer_timer_led_greenPeriodic_Complete);
-   HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
-   ////To start this timer
-   //timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
+    ////To set Event For This timer timeOut
+    //Main_Thread::instance().eventSet(Timer_timer_led_greenPeriodic_Complete);
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    ////To start this timer
+    //timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
 
-   ////To wait for this timer timeOut event
-   //eventWait(Timer_timer_led_greenPeriodic_Complete);
+    ////To wait for this timer timeOut event
+    //eventWait(Timer_timer_led_greenPeriodic_Complete);
 }

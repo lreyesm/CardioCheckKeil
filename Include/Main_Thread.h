@@ -19,6 +19,7 @@
 //#define OXIMETER_DUAL_ADC
 
 #define FUNCTION_BUFFER_SIZE 25
+#define FUNCTION_BUFFER_STORAGE_SIZE FUNCTION_BUFFER_SIZE*4
 
 #define ADC_BUFFER_SIZE 100
 #define ADC_BUFFER_STORAGE_SIZE ADC_BUFFER_SIZE*4
@@ -35,8 +36,11 @@
 #define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS+ADC_BUFFER_SIZE
 #define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE
 
-#define ERROR_ID 0x0F
-#define HEADER_ID 0x0FA
+#define INIT_PROG_ID 0x0AA   ////Inicio de Programa
+#define INIT_SEND_ID 0x0FE  ////Inicio de Envio de informacion
+#define ERROR_ID 0x0F  ////Envio de Error de recivo
+
+#define HEADER_ID 0x0FA ////Inicio de Programa
 #define HEADER_START_POS 0
 #define HEADER_END_POS DATA_GRAPH_FT_INIT_BUFFER_POS+(FUNCTION_BUFFER_SIZE*2)
 #define HEADER_SIZE 4
@@ -100,7 +104,9 @@ typedef enum{
     virtual void userLoop() E_DECLARE_OVERRIDE;
 
     static bool CH0_Ready;
+    static bool CH0_init_Ready;
     static bool CH1_Ready;
+    static bool CH1_init_Ready;
     static bool ADC_Ready;
     static bool start_transmit_ftdi;
     static bool start_transmit_bluetooth;
@@ -113,7 +119,12 @@ typedef enum{
     static std::uint8_t CH3_read_buffer_0[16];
 
     static std::uint8_t CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
+    static std::uint8_t CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
+    static std::uint32_t CH0_function_buffer_storage_pos;
+		
     static std::uint8_t CH1_function_buffer_0[FUNCTION_BUFFER_SIZE];
+		static std::uint8_t CH1_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
+    static std::uint32_t CH1_function_buffer_storage_pos;
 
     static std::uint8_t transmit_buffer_0[UART_SEND_BUFFER_SIZE];
     static std::uint8_t transmit_buffer_1[UART_SEND_BUFFER_SIZE];
