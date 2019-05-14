@@ -129,6 +129,9 @@ typedef enum{
 
     static std::uint32_t adc_value;
     static std::uint16_t ADC_buffer[ADC_BUFFER_SIZE];
+		static std::uint8_t ADC_buffer_send_1[ADC_BUFFER_SIZE];
+		static std::uint8_t ADC_buffer_send_2[ADC_BUFFER_SIZE];
+		static std::uint8_t current_ADC_Buffer;
     static std::uint8_t ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
     static std::uint32_t ADC_buffer_pos;
     static std::uint32_t ADC_buffer_storage_pos;
