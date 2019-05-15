@@ -170,7 +170,7 @@ void Main_Thread::process_9A_buff_CH0(std::uint8_t function_value){
     if(CH0_function_buffer_0[CH0_buffer_pos] > 100){
         CH0_function_buffer_0[CH0_buffer_pos] = 0;
     }
-    else if(CH0_function_buffer_0[CH0_buffer_pos] > 98 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
+    else if(CH0_function_buffer_0[CH0_buffer_pos] > 99 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
 
         if(CH0_buffer_pos == 0){
             CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
@@ -209,7 +209,7 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
     if(CH1_function_buffer_0[CH1_buffer_pos] > 100){
         CH1_function_buffer_0[CH1_buffer_pos] = 0;
     }
-    else if(CH1_function_buffer_0[CH1_buffer_pos] > 98  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
+    else if(CH1_function_buffer_0[CH1_buffer_pos] > 99  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
 
         if(CH1_buffer_pos == 0){
             CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
