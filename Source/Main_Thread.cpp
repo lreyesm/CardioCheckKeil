@@ -56,6 +56,8 @@ bool Main_Thread::ADC_Ready = false;
 bool Main_Thread::start_transmit_ftdi = false;
 bool Main_Thread::start_transmit_bluetooth = false;
 
+std::uint8_t Main_Thread::current_oxymeter = 0;
+
 std::uint8_t Main_Thread::write_buff [UART_SEND_TOTAL_SIZE];
 
 std::uint8_t Main_Thread::CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
@@ -132,8 +134,8 @@ Main_Thread::Main_Thread():
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
-    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_0[i]=0; if(i<HEADER_SIZE || i>HEADER_END_POS-1){Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;}}
-    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_1[i]=0; if(i<HEADER_SIZE || i>HEADER_END_POS-1){Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;}}
+    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_0[i]=0; if(i<HEADER_SIZE || i>TAIL_START_POS-1){Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;}}
+    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_1[i]=0; if(i<HEADER_SIZE || i>TAIL_START_POS-1){Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;}}
 
     Main_Thread::instance().transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
     Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
@@ -157,7 +159,6 @@ Main_Thread::Main_Thread():
     HAL_ADC_Start_DMA(&hadc1, &adc_value, 1);
     thread_Read_ADC.start();
     timer_timer_ADC.start(TIMER_timer_ADC_PERIOD_MS);
-
 }
 /*End of Main Thread Constructor Generated Code*/
 
@@ -170,7 +171,7 @@ void Main_Thread::process_9A_buff_CH0(std::uint8_t function_value){
     if(CH0_function_buffer_0[CH0_buffer_pos] > 100){
         CH0_function_buffer_0[CH0_buffer_pos] = 0;
     }
-    else if(CH0_function_buffer_0[CH0_buffer_pos] > 99 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
+    else if(CH0_function_buffer_0[CH0_buffer_pos] > 98 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
 
         if(CH0_buffer_pos == 0){
             CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
@@ -209,7 +210,7 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
     if(CH1_function_buffer_0[CH1_buffer_pos] > 100){
         CH1_function_buffer_0[CH1_buffer_pos] = 0;
     }
-    else if(CH1_function_buffer_0[CH1_buffer_pos] > 99  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
+    else if(CH1_function_buffer_0[CH1_buffer_pos] > 98  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
 
         if(CH1_buffer_pos == 0){
             CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
@@ -542,7 +543,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
         }
     }
 }
-void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
+void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 {
     std::int32_t signal = 0;
     eObject::eThread::ThreadEventFlags receivedSignal;
@@ -600,8 +601,10 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
 
                     if(message_id == (uint8_t)DATA_INIT_BUFFER_ID){
 
-                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H;
+                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
+											  current_oxymeter = OXYMETER_2;
+											
                         SPO2 = CH1_processsing_buffer_0[i + 3];
 
                         BPM_L = CH1_processsing_buffer_0[i + 4];
@@ -609,6 +612,8 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
 
                         PI_L = CH1_processsing_buffer_0[i + 6];
                         PI_H = CH1_processsing_buffer_0[i + 7];
+											
+											  STATUS_CHECK = CH1_processsing_buffer_0[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -617,19 +622,23 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+												  	transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -697,8 +706,10 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
 
                     if(message_id == (uint8_t)DATA_INIT_BUFFER_ID){
 
-                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H;
+                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
+											  current_oxymeter = OXYMETER_2;
+											
                         SPO2 = CH1_processsing_buffer_1[i + 3];
 
                         BPM_L = CH1_processsing_buffer_1[i + 4];
@@ -706,6 +717,8 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
 
                         PI_L = CH1_processsing_buffer_1[i + 6];
                         PI_H = CH1_processsing_buffer_1[i + 7];
+											
+											  STATUS_CHECK = CH1_processsing_buffer_1[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -714,19 +727,23 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -759,7 +776,7 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread)
         }
     }
 }
-void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
+void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 {
     std::int32_t signal = 0;
     eObject::eThread::ThreadEventFlags receivedSignal;
@@ -817,7 +834,9 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
 
                     if(message_id == (uint8_t)DATA_INIT_BUFFER_ID){
 
-                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H;
+                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
+											
+											  current_oxymeter = OXYMETER_1;
 
                         SPO2 = CH0_processsing_buffer_0[i + 3];
 
@@ -826,6 +845,8 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
 
                         PI_L = CH0_processsing_buffer_0[i + 6];
                         PI_H = CH0_processsing_buffer_0[i + 7];
+											
+											  STATUS_CHECK = CH0_processsing_buffer_0[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -834,19 +855,23 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -914,8 +939,10 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
 
                     if(message_id == (uint8_t)DATA_INIT_BUFFER_ID){
 
-                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H;
+                        uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
+											  current_oxymeter = OXYMETER_1;
+											
                         SPO2 = CH0_processsing_buffer_1[i + 3];
 
                         BPM_L = CH0_processsing_buffer_1[i + 4];
@@ -923,6 +950,8 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
 
                         PI_L = CH0_processsing_buffer_1[i + 6];
                         PI_H = CH0_processsing_buffer_1[i + 7];
+											
+											  STATUS_CHECK = CH0_processsing_buffer_1[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -931,19 +960,23 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread)
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-
+  
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
                             transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
                             transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
                             transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
