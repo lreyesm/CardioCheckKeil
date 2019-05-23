@@ -147,7 +147,7 @@ Main_Thread::Main_Thread():
 			Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;
 			Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;
 		}
-		for(i=TAIL_START_POS; i<TAIL_SIZE ;++i){		
+		for(i=TAIL_START_POS; i<TAIL_START_POS+TAIL_SIZE ;++i){		
 			Main_Thread::instance().transmit_buffer_0[i]=TAIL_ID;
 			Main_Thread::instance().transmit_buffer_1[i]=TAIL_ID;
 		}

@@ -150,6 +150,22 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
+          <LineNumber>155</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134237070</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\155</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
           <LineNumber>57</LineNumber>
           <EnabledFlag>1</EnabledFlag>
           <Address>134230346</Address>
@@ -159,73 +175,41 @@
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\PROJECTS_MINE\proyecto_finalizados\Oximetro\Keil\Oximeter_Dual_9008_ADC_heart_and_Qt_Ver_Bluetooth_and_ftdi\RTE\eObject_Framework\UserCallBacks.cpp</Filename>
+          <Filename>RTE\eObject_Framework\UserCallBacks.cpp</Filename>
           <ExecCommand></ExecCommand>
           <Expression>\\ADC_DMA_MULTI_Heart\RTE/eObject_Framework/UserCallBacks.cpp\57</Expression>
         </Bp>
         <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>459</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134235816</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\PROJECTS_MINE\proyecto_finalizados\Oximetro\Keil\Oximeter_Dual_9008_ADC_heart_and_Qt_Ver_Bluetooth_and_ftdi\Source\Main_Thread.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\459</Expression>
-        </Bp>
-        <Bp>
           <Number>2</Number>
           <Type>0</Type>
-          <LineNumber>452</LineNumber>
+          <LineNumber>348</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134235792</Address>
+          <Address>134236492</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\PROJECTS_MINE\proyecto_finalizados\Oximetro\Keil\Oximeter_Dual_9008_ADC_heart_and_Qt_Ver_Bluetooth_and_ftdi\Source\Main_Thread.cpp</Filename>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\452</Expression>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\348</Expression>
         </Bp>
         <Bp>
           <Number>3</Number>
           <Type>0</Type>
-          <LineNumber>332</LineNumber>
+          <LineNumber>399</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134236300</Address>
+          <Address>134236676</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\PROJECTS_MINE\proyecto_finalizados\Oximetro\Keil\Oximeter_Dual_9008_ADC_heart_and_Qt_Ver_Bluetooth_and_ftdi\Source\Main_Thread.cpp</Filename>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\332</Expression>
-        </Bp>
-        <Bp>
-          <Number>4</Number>
-          <Type>0</Type>
-          <LineNumber>383</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134236484</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>D:\PROJECTS_MINE\proyecto_finalizados\Oximetro\Keil\Oximeter_Dual_9008_ADC_heart_and_Qt_Ver_Bluetooth_and_ftdi\Source\Main_Thread.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\383</Expression>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\399</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -253,6 +237,11 @@
           <count>4</count>
           <WinNumber>1</WinNumber>
           <ItemText>init_prog</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>transmit_buffer_0</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
