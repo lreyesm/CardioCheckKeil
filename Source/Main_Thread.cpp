@@ -147,13 +147,13 @@ Main_Thread::Main_Thread():
 			Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;
 			Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;
 		}
-		for(i=TAIL_START_POS; i<TAIL_START_POS+TAIL_SIZE ;++i){		
-			Main_Thread::instance().transmit_buffer_0[i]=TAIL_ID;
-			Main_Thread::instance().transmit_buffer_1[i]=TAIL_ID;
-		}
+//		for(i=TAIL_START_POS; i<TAIL_START_POS+TAIL_SIZE ;++i){		
+//			Main_Thread::instance().transmit_buffer_0[i]=TAIL_ID;
+//			Main_Thread::instance().transmit_buffer_1[i]=TAIL_ID;
+//		}
 				 
-    Main_Thread::instance().transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
-    Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
+//    Main_Thread::instance().transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
+//    Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
 
     process_Receive_Commands.start();
     HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
@@ -186,7 +186,7 @@ void Main_Thread::process_9A_buff_CH0(std::uint8_t function_value){
     if(CH0_function_buffer_0[CH0_buffer_pos] > 100){
         CH0_function_buffer_0[CH0_buffer_pos] = 0;
     }
-    else if(CH0_function_buffer_0[CH0_buffer_pos] > 98 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
+    else if(CH0_function_buffer_0[CH0_buffer_pos] > 97 || CH0_function_buffer_0[CH0_buffer_pos] <= 0){
 
         if(CH0_buffer_pos == 0){
             CH0_function_buffer_0[CH0_buffer_pos]= CH0_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
@@ -225,7 +225,7 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
     if(CH1_function_buffer_0[CH1_buffer_pos] > 100){
         CH1_function_buffer_0[CH1_buffer_pos] = 0;
     }
-    else if(CH1_function_buffer_0[CH1_buffer_pos] > 98  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
+    else if(CH1_function_buffer_0[CH1_buffer_pos] > 97  || CH1_function_buffer_0[CH1_buffer_pos] <= 0){
 
         if(CH1_buffer_pos == 0){
             CH1_function_buffer_0[CH1_buffer_pos]= CH1_function_buffer_0[FUNCTION_BUFFER_SIZE - 1];
@@ -614,7 +614,7 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                         continue;
                     }
 
-                    if(message_id == (uint8_t)DATA_INIT_BUFFER_ID){
+                    if(message_id == (uint8_t)DATA_INIT_BUFFER_ID)/*0x9B*/{
 
                         uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
@@ -637,22 +637,20 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
-													  transmit_buffer_1[CURRENT_OXYMETER_OXY2_POS] = OXYMETER_2;
                             transmit_buffer_1[SPO2_BUFFER_OXY2_POS] = SPO2;
-                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_1[BPM_BUFFER_OXY2_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_OXY2_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_OXY2_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_OXY2_POS+1] = PI_H;
 													  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
-													  transmit_buffer_0[CURRENT_OXYMETER_OXY2_POS] = OXYMETER_2;
                             transmit_buffer_0[SPO2_BUFFER_OXY2_POS] = SPO2;
-                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_0[BPM_BUFFER_OXY2_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_OXY2_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_OXY2_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_OXY2_POS+1] = PI_H;
 												  	transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
                         }
 
@@ -740,24 +738,22 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                             SPO2 = 0x0FF;
                         }
 
-                        if(buffer_transmit == BUFFER_TRANSMIT_0){
-
-													  transmit_buffer_1[CURRENT_OXYMETER_OXY2_POS] = OXYMETER_2;
+                        if(buffer_transmit == BUFFER_TRANSMIT_0){//oxy2
+													
                             transmit_buffer_1[SPO2_BUFFER_OXY2_POS] = SPO2;
-                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_1[BPM_BUFFER_OXY2_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_OXY2_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_OXY2_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_OXY2_POS+1] = PI_H;
 													  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-
-													  transmit_buffer_0[CURRENT_OXYMETER_OXY2_POS] = OXYMETER_2;
+													
                             transmit_buffer_0[SPO2_BUFFER_OXY2_POS] = SPO2;
-                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_0[BPM_BUFFER_OXY2_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_OXY2_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_OXY2_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_OXY2_POS+1] = PI_H;
 													  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
                         }
 
@@ -870,22 +866,20 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
-													  transmit_buffer_1[CURRENT_OXYMETER_OXY1_POS] = OXYMETER_1;
                             transmit_buffer_1[SPO2_BUFFER_OXY1_POS] = SPO2;
-                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_1[BPM_BUFFER_OXY1_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_OXY1_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_OXY1_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_OXY1_POS+1] = PI_H;
 													  transmit_buffer_1[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-
-													  transmit_buffer_0[CURRENT_OXYMETER_OXY1_POS] = OXYMETER_1;
-                            transmit_buffer_0[SPO2_BUFFER_OXY1_POS] = SPO2;
-                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+  
+													  transmit_buffer_0[SPO2_BUFFER_OXY1_POS] = SPO2;
+                            transmit_buffer_0[BPM_BUFFER_OXY1_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_OXY1_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_OXY1_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_OXY1_POS+1] = PI_H;
 													  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
                         }
 
@@ -975,22 +969,20 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
-													  transmit_buffer_1[CURRENT_OXYMETER_OXY1_POS] = OXYMETER_1;
                             transmit_buffer_1[SPO2_BUFFER_OXY1_POS] = SPO2;
-                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_1[BPM_BUFFER_OXY1_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_OXY1_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_OXY1_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_OXY1_POS+1] = PI_H;
 													  transmit_buffer_1[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-  
-													  transmit_buffer_0[CURRENT_OXYMETER_OXY1_POS] = OXYMETER_1;
+
                             transmit_buffer_0[SPO2_BUFFER_OXY1_POS] = SPO2;
-                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
-                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
-                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
-                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+                            transmit_buffer_0[BPM_BUFFER_OXY1_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_OXY1_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_OXY1_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_OXY1_POS+1] = PI_H;
 													  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
                         }
 
