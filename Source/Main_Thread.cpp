@@ -1,8 +1,5 @@
 #include "Main_Thread.h"
 
-uint32_t oxy1=0;
-uint32_t oxy2=0;
-
 const uint32_t crc32_tab[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3,	0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -137,6 +134,7 @@ Main_Thread::Main_Thread():
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
+<<<<<<< HEAD
     for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ 
 		
 		  Main_Thread::instance().transmit_buffer_0[i]=0;
@@ -154,6 +152,13 @@ Main_Thread::Main_Thread():
 				 
 //    Main_Thread::instance().transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
 //    Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
+=======
+    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_0[i]=0; if(i<HEADER_SIZE || i>TAIL_START_POS-1){Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;}}
+    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ Main_Thread::instance().transmit_buffer_1[i]=0; if(i<HEADER_SIZE || i>TAIL_START_POS-1){Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;}}
+
+    Main_Thread::instance().transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
+    Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
+>>>>>>> parent of 91ecb43... Cambios a probar
 
     process_Receive_Commands.start();
     HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
@@ -637,6 +642,7 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+<<<<<<< HEAD
                             transmit_buffer_1[SPO2_BUFFER_OXY2_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_OXY2_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_OXY2_POS+1] = BPM_H;
@@ -652,6 +658,25 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                             transmit_buffer_0[PI_BUFFER_OXY2_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY2_POS+1] = PI_H;
 												  	transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
+=======
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
+
+                        }else if(buffer_transmit == BUFFER_TRANSMIT_1){
+
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+												  	transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
+>>>>>>> parent of 91ecb43... Cambios a probar
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -738,6 +763,7 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                             SPO2 = 0x0FF;
                         }
 
+<<<<<<< HEAD
                         if(buffer_transmit == BUFFER_TRANSMIT_0){//oxy2
 													
                             transmit_buffer_1[SPO2_BUFFER_OXY2_POS] = SPO2;
@@ -755,6 +781,27 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                             transmit_buffer_0[PI_BUFFER_OXY2_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY2_POS+1] = PI_H;
 													  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
+=======
+                        if(buffer_transmit == BUFFER_TRANSMIT_0){
+
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
+
+                        }else if(buffer_transmit == BUFFER_TRANSMIT_1){
+
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
+>>>>>>> parent of 91ecb43... Cambios a probar
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -866,6 +913,7 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+<<<<<<< HEAD
                             transmit_buffer_1[SPO2_BUFFER_OXY1_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_OXY1_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_OXY1_POS+1] = BPM_H;
@@ -881,6 +929,25 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
                             transmit_buffer_0[PI_BUFFER_OXY1_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY1_POS+1] = PI_H;
 													  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
+=======
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
+
+                        }else if(buffer_transmit == BUFFER_TRANSMIT_1){
+
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
+>>>>>>> parent of 91ecb43... Cambios a probar
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -969,6 +1036,7 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){
 
+<<<<<<< HEAD
                             transmit_buffer_1[SPO2_BUFFER_OXY1_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_OXY1_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_OXY1_POS+1] = BPM_H;
@@ -984,6 +1052,25 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
                             transmit_buffer_0[PI_BUFFER_OXY1_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY1_POS+1] = PI_H;
 													  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
+=======
+													  transmit_buffer_1[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_1[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_1[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_1[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_1[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_1[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_1[STATUS_CHECK_POS] = STATUS_CHECK;
+
+                        }else if(buffer_transmit == BUFFER_TRANSMIT_1){
+  
+													  transmit_buffer_0[CURRENT_OXYMETER_POS] = current_oxymeter;
+                            transmit_buffer_0[SPO2_BUFFER_POS] = SPO2;
+                            transmit_buffer_0[BPM_BUFFER_POS] = BPM_L;
+                            transmit_buffer_0[BPM_BUFFER_POS+1] = BPM_H;
+                            transmit_buffer_0[PI_BUFFER_POS] = PI_L;
+                            transmit_buffer_0[PI_BUFFER_POS+1] = PI_H;
+													  transmit_buffer_0[STATUS_CHECK_POS] = STATUS_CHECK;
+>>>>>>> parent of 91ecb43... Cambios a probar
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
