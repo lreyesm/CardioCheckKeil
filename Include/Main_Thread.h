@@ -36,8 +36,8 @@
 
 #define DATA_INIT_BUFFER_POS HEADER_START_POS + HEADER_SIZE  //2
 #define DATA_INIT_BUFFER_ID 0x09B
-#define DATA_BUFFER_TRANSMIT_0 0x011
-#define DATA_BUFFER_TRANSMIT_1 0x022
+//#define DATA_BUFFER_TRANSMIT_0 0x011
+//#define DATA_BUFFER_TRANSMIT_1 0x022
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define OXYMETER_1  1 //UART2
@@ -133,6 +133,7 @@ typedef enum{
     static bool ADC_Ready;
     static bool start_transmit_ftdi;
     static bool start_transmit_bluetooth;
+		static bool error_sending;
 
     static std::uint8_t current_oxymeter;
 
@@ -173,6 +174,7 @@ typedef enum{
     static std::uint32_t ADC_buffer_storage_pos;
 
 
+
     static void setBufferOffset(const BUFFER_StateTypeDef);
     /*User declare thread objects*/
     eObject::eThread process_Receive_Commands;
@@ -193,7 +195,7 @@ typedef enum{
 private:
     eVirtualTimer timer_timer_led_green;
 
-    static const std::uint32_t TIMER_timer_led_green_PERIOD_MS = 1000;
+    static const std::uint32_t TIMER_timer_led_green_PERIOD_MS = 2000;
 
     eVirtualTimer timer_timer_led_red;
 

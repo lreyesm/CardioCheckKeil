@@ -58,10 +58,11 @@ bool Main_Thread::CH1_init_Ready = false;
 bool Main_Thread::ADC_Ready = false;
 bool Main_Thread::start_transmit_ftdi = false;
 bool Main_Thread::start_transmit_bluetooth = false;
+bool Main_Thread::error_sending = false;
 
 std::uint8_t Main_Thread::current_oxymeter = 0;
 
-std::uint8_t Main_Thread::write_buff [UART_SEND_TOTAL_SIZE];
+std::uint8_t Main_Thread::write_buff[UART_SEND_TOTAL_SIZE];
 
 std::uint8_t Main_Thread::CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
@@ -334,7 +335,7 @@ void Main_Thread::userLoop()
                         pos_func_buffer_1=0;
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
-                    transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_0;
+                    //transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_0;
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
 
                     for(i=0; i<4 ;++i){
@@ -385,7 +386,7 @@ void Main_Thread::userLoop()
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
                     
-                    transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
+                    //transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_1, UART_SEND_BUFFER_SIZE);
 
                     for(i=0; i<4 ;++i){
@@ -460,8 +461,9 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 }
             }
             if(retransmit){
-                HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
-                continue;
+                init = false;
+                Main_Thread::instance().timer_timer_led_green.restart();	
+							  error_sending=true;
             }
             ////////////Bluetooth/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             init = true;
@@ -492,7 +494,9 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 }
             }
             if(retransmit){
-                HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
+							  init = false;
+                Main_Thread::instance().timer_timer_led_green.restart();
+                error_sending=true;							
                 continue;
             }
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1042,7 +1046,7 @@ void Main_Thread::timer_ADC_timeout(void const *argument){
     //eventWait(Timer_timer_ADCPeriodic_Complete);
 }
 
-void Main_Thread::timeOut_timer_leds_function(void const *argument){
+void Main_Thread::timeOut_timer_leds_function(void const *argument){  ///Led azul
 
     ////To set Event For This timer timeOut
     //Main_Thread::instance().eventSet(Timer_timer_ledsPeriodic_Complete);
@@ -1071,6 +1075,10 @@ void Main_Thread::timeOut_timer_led_green_function(void const *argument){
     ////To set Event For This timer timeOut
     //Main_Thread::instance().eventSet(Timer_timer_led_greenPeriodic_Complete);
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+	  if(error_sending){
+	     Main_Thread::instance().eventSet(INIT_PROGRAM);
+		   error_sending=false;
+	  }
     ////To start this timer
     //timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
 
