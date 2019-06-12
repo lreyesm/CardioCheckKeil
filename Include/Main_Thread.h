@@ -52,8 +52,8 @@
 #define PI_BUFFER_OXY2_POS SPO2_BUFFER_OXY2_POS+3 //10
 
 #define DATA_GRAPH_HR_INIT_BUFFER_POS DATA_INIT_BUFFER_POS+10 //12
-#define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS + ADC_BUFFER_SIZE //110
-#define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //135
+#define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS + ADC_BUFFER_SIZE*2 //210 //por 2 porque adc buffer es de 16bits
+#define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //235
 
 #define INIT_PROG_ID 0x0AA   ////Inicio de Programa
 #define INIT_SEND_ID 0x0FE  ////Inicio de Envio de informacion
@@ -62,14 +62,14 @@
 //#define HEADER_END_POS 160
 
 //#define CURRENT_OXYMETER_OXY1_POS DATA_INIT_BUFFER_POS+1 //3
-#define STATUS_CHECK_OXY1_POS DATA_GRAPH_FT_2_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //162
-#define STATUS_CHECK_OXY2_POS STATUS_CHECK_OXY1_POS+1 //163
-//#define CURRENT_OXYMETER_OXY2_POS DATA_GRAPH_FT_INIT_BUFFER_POS+(FUNCTION_BUFFER_SIZE*2) //160
+#define STATUS_CHECK_OXY1_POS DATA_GRAPH_FT_2_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //262
+#define STATUS_CHECK_OXY2_POS STATUS_CHECK_OXY1_POS+1 //263
+//#define CURRENT_OXYMETER_OXY2_POS DATA_GRAPH_FT_INIT_BUFFER_POS+(FUNCTION_BUFFER_SIZE*2) //260
 //#define SPO2_BUFFER_OXY2_POS CURRENT_OXYMETER_OXY2_POS //160
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define UART_SEND_BUFFER_SIZE STATUS_CHECK_OXY2_POS + 1 //164
-#define UART_SEND_TOTAL_SIZE UART_SEND_BUFFER_SIZE + CHECK_SUM_SIZE //168
+#define UART_SEND_BUFFER_SIZE STATUS_CHECK_OXY2_POS + 1 //264
+#define UART_SEND_TOTAL_SIZE UART_SEND_BUFFER_SIZE + CHECK_SUM_SIZE //268
 
 #define UART_READ_BUFFER_SIZE 256
 
@@ -166,10 +166,10 @@ typedef enum{
 
     static std::uint32_t adc_value;
     static std::uint16_t ADC_buffer[ADC_BUFFER_SIZE];
-		static std::uint8_t ADC_buffer_send_1[ADC_BUFFER_SIZE];
-		static std::uint8_t ADC_buffer_send_2[ADC_BUFFER_SIZE];
+		static std::uint8_t ADC_buffer_send_1[ADC_BUFFER_SIZE*2]; //por 2 porque es un entero de 8bits
+		static std::uint8_t ADC_buffer_send_2[ADC_BUFFER_SIZE*2];
 		static std::uint8_t current_ADC_Buffer;
-    static std::uint8_t ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
+    static std::uint16_t ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
     static std::uint32_t ADC_buffer_pos;
     static std::uint32_t ADC_buffer_storage_pos;
 

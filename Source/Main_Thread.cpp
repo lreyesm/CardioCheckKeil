@@ -91,10 +91,10 @@ uint16_t Main_Thread::CH1_buffer_pos = 0;
 
 std::uint32_t Main_Thread::adc_value=0;
 std::uint16_t Main_Thread::ADC_buffer[ADC_BUFFER_SIZE];
-std::uint8_t Main_Thread::ADC_buffer_send_1[ADC_BUFFER_SIZE];
-std::uint8_t Main_Thread::ADC_buffer_send_2[ADC_BUFFER_SIZE];
+std::uint8_t Main_Thread::ADC_buffer_send_1[ADC_BUFFER_SIZE*2];
+std::uint8_t Main_Thread::ADC_buffer_send_2[ADC_BUFFER_SIZE*2];
 std::uint8_t Main_Thread::current_ADC_Buffer=1;
-std::uint8_t Main_Thread::ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
+std::uint16_t Main_Thread::ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
 std::uint32_t Main_Thread::ADC_buffer_pos=0;
 std::uint32_t Main_Thread::ADC_buffer_storage_pos=0;
 
@@ -284,7 +284,7 @@ void Main_Thread::userLoop()
     eObject::eThread::ThreadEventFlags receivedSignal;
 
     uint32_t crcValue;
-    uint8_t i, buf_8b[4];
+    uint8_t i,c=0,n=0, buf_8b[4];
     std::uint32_t pos =0;
     std::uint32_t pos_func_buffer_0 =0;
     std::uint32_t pos_func_buffer_1 =0;
@@ -306,16 +306,17 @@ void Main_Thread::userLoop()
 
                 if(buffer_transmit == BUFFER_TRANSMIT_0){
 
-                    //									  if(current_ADC_Buffer == 1){
-                    //											std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_2[0], ADC_BUFFER_SIZE);
-                    //										}
-                    //                    else if(current_ADC_Buffer == 2){
-                    //										  std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_1[0], ADC_BUFFER_SIZE);
-                    //										}
-
                     //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 0--------------------------------------------
-                    std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
+                    //std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
 
+									  c=0;
+									  for(i=0; i < ADC_BUFFER_SIZE ;++i){
+											
+											  c = i*2;
+                        transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS + c] = ((ADC_buffer_storage[pos + i]>>8) & 0x0FF);
+											  transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS + c + 1] = ((ADC_buffer_storage[pos + i]) & 0x0FF);
+                    }
+										
                     pos+=ADC_BUFFER_SIZE;
                     if(pos >= ADC_BUFFER_STORAGE_SIZE){
                         pos=0;
@@ -356,16 +357,16 @@ void Main_Thread::userLoop()
                 }
                 else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
-                    //										if(current_ADC_Buffer == 1){
-                    //											std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_2[0], ADC_BUFFER_SIZE);
-                    //										}
-                    //                    else if(current_ADC_Buffer == 2){
-                    //										  std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_send_1[0], ADC_BUFFER_SIZE);
-                    //										}
-
                     //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 1--------------------------------------------
-                    std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
-
+                    //std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], (uint8_t*)(&ADC_buffer_storage[pos]), ADC_BUFFER_SIZE*2);
+                    c=0;
+									  for(i=0; i < ADC_BUFFER_SIZE ;++i){
+											
+											  c = i*2;
+                        transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS + c] = ((ADC_buffer_storage[pos + i]>>8) & 0x0FF);
+											  transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS + c + 1] = ((ADC_buffer_storage[pos + i]) & 0x0FF);
+                    }
+										
                     pos+=ADC_BUFFER_SIZE;
                     if(pos >= ADC_BUFFER_STORAGE_SIZE){
                         pos=0;
@@ -520,7 +521,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
         eventWait(Timer_timer_ADCPeriodic_Complete);
 
         value_adc = adc_value;
-        ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits
+        ADC_buffer[ADC_buffer_pos]= value_adc;  //para adc_16bits
         ADC_buffer_pos++;
 
         if(ADC_buffer_pos >= ADC_BUFFER_SIZE){
@@ -533,11 +534,11 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
 
             arm_fir_f32(&S, inputF32 , outputF32, ADC_BUFFER_SIZE);
 
-            arm_float_to_q7(&outputF32[0], (q7_t*)&temp_buff[0], ADC_BUFFER_SIZE);
+            arm_float_to_q15(&outputF32[0], (q15_t*)&temp_buff_16[0], ADC_BUFFER_SIZE);
 
-            for(i=0; i<ADC_BUFFER_SIZE ;++i){
-                temp_buff[i] = temp_buff[i]<<1;
-            }
+//            for(i=0; i<ADC_BUFFER_SIZE ;++i){
+//                temp_buff_16[i] = temp_buff_16[i]<<1;
+//            }
 
             //						if(current_ADC_Buffer == 1){
             //
@@ -553,7 +554,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
             //
             //						}
             //						ADC_Ready = true;
-            std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff, ADC_BUFFER_SIZE);
+            std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff_16, sizeof(temp_buff_16));
             ADC_buffer_storage_pos+=ADC_BUFFER_SIZE;
             if(ADC_buffer_storage_pos >= ADC_BUFFER_STORAGE_SIZE){
                 ADC_Ready = true;
