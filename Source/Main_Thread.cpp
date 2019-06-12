@@ -521,7 +521,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
         eventWait(Timer_timer_ADCPeriodic_Complete);
 
         value_adc = adc_value;
-        ADC_buffer[ADC_buffer_pos]= value_adc;  //para adc_16bits
+        ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits 
         ADC_buffer_pos++;
 
         if(ADC_buffer_pos >= ADC_BUFFER_SIZE){
@@ -536,24 +536,10 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
 
             arm_float_to_q15(&outputF32[0], (q15_t*)&temp_buff_16[0], ADC_BUFFER_SIZE);
 
-//            for(i=0; i<ADC_BUFFER_SIZE ;++i){
-//                temp_buff_16[i] = temp_buff_16[i]<<1;
-//            }
+            for(i=0; i<ADC_BUFFER_SIZE ;++i){
+                temp_buff_16[i] = temp_buff_16[i]<<1;
+            }
 
-            //						if(current_ADC_Buffer == 1){
-            //
-            //						  std::memcpy( &ADC_buffer_send_1[0], temp_buff, ADC_BUFFER_SIZE);
-            //
-            //							current_ADC_Buffer = 2;
-            //						}
-            //						else if(current_ADC_Buffer == 2){
-            //
-            //						  std::memcpy( &ADC_buffer_send_2[0], temp_buff, ADC_BUFFER_SIZE);
-            //
-            //							current_ADC_Buffer = 1;
-            //
-            //						}
-            //						ADC_Ready = true;
             std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff_16, sizeof(temp_buff_16));
             ADC_buffer_storage_pos+=ADC_BUFFER_SIZE;
             if(ADC_buffer_storage_pos >= ADC_BUFFER_STORAGE_SIZE){
