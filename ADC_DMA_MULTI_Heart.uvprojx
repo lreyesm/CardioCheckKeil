@@ -425,6 +425,11 @@
               <FileType>1</FileType>
               <FilePath>.\RTE\Device\STM32F407VGTx\STCubeGenerated\Src\usart.c</FilePath>
             </File>
+            <File>
+              <FileName>spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\RTE\Device\STM32F407VGTx\STCubeGenerated\Src\spi.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -441,7 +446,16 @@
           <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
+          <GroupName>::CMSIS Driver</GroupName>
+        </Group>
+        <Group>
+          <GroupName>::Compiler</GroupName>
+        </Group>
+        <Group>
           <GroupName>::Device</GroupName>
+        </Group>
+        <Group>
+          <GroupName>::File System</GroupName>
         </Group>
         <Group>
           <GroupName>::eObject Framework</GroupName>
@@ -465,6 +479,16 @@
           <targetInfo name="Debug" versionMatchMode="fixed"/>
         </targetInfos>
       </package>
+      <package name="ARM_Compiler" schemaVersion="1.4.9" url="http://www.keil.com/pack/" vendor="Keil" version="1.3.1">
+        <targetInfos>
+          <targetInfo name="Debug" versionMatchMode="fixed"/>
+        </targetInfos>
+      </package>
+      <package name="MDK-Middleware" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="Keil" version="7.1.0">
+        <targetInfos>
+          <targetInfo name="Debug" versionMatchMode="fixed"/>
+        </targetInfos>
+      </package>
       <package name="STM32F4xx_DFP" schemaVersion="1.3" url="http://www.keil.com/pack" vendor="Keil" version="2.11.0">
         <targetInfos>
           <targetInfo name="Debug" versionMatchMode="fixed"/>
@@ -479,6 +503,12 @@
       </gpdsc>
     </gpdscs>
     <apis>
+      <api Capiversion="2.01" Cclass="CMSIS Driver" Cgroup="SPI" exclusive="0">
+        <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="4.5.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </api>
       <api Capiversion="1.0.0" Cclass="CMSIS" Cgroup="RTOS" exclusive="1">
         <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="5.0.1"/>
         <targetInfos>
@@ -513,6 +543,30 @@
       </component>
       <component Cbundle="eObject" Cclass="eObject Framework" Cgroup="Core" Cvariant="Release" Cvendor="CNEURO" Cversion="0.11.0" condition="CMSIS and STM32CubeHal">
         <package name="eObject_Framework" schemaVersion="1.4" supportContact="ecruzolivera@gmail.com" url="&quot;file://respaldo\Dpto_Electronica\Programas_Herramientas_Docs\ARM_Tools_And_Docs\MDK_ARM\Pack\&quot;" vendor="CNEURO" version="0.11.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </component>
+      <component Cbundle="ARM Compiler" Cclass="Compiler" Cgroup="I/O" Csub="File" Cvariant="File System" Cvendor="Keil" Cversion="1.2.0" condition="ARMCC Cortex-M with File System">
+        <package name="ARM_Compiler" schemaVersion="1.4.9" url="http://www.keil.com/pack/" vendor="Keil" version="1.3.1"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </component>
+      <component Cbundle="MDK-Pro" Cclass="File System" Cgroup="CORE" Cvariant="SFN" Cvendor="Keil" Cversion="6.7.0" condition="CMSIS Core with RTOS and File System I/O">
+        <package name="MDK-Middleware" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="Keil" version="7.1.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </component>
+      <component Cbundle="MDK-Pro" Cclass="File System" Cgroup="Drive" Csub="Memory Card" Cvendor="Keil" Cversion="6.7.0" condition="File System and SD/MMC Driver" maxInstances="2">
+        <package name="MDK-Middleware" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="Keil" version="7.1.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </component>
+      <component Capiversion="2.1" Cclass="CMSIS Driver" Cgroup="SPI" Cvendor="Keil" Cversion="2.9" condition="STM32F4 CMSIS_Driver SPI">
+        <package name="STM32F4xx_DFP" schemaVersion="1.3" url="http://www.keil.com/pack" vendor="Keil" version="2.11.0"/>
         <targetInfos>
           <targetInfo name="Debug"/>
         </targetInfos>
@@ -559,6 +613,12 @@
           <targetInfo name="Debug"/>
         </targetInfos>
       </component>
+      <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SPI" Cvendor="Keil" Cversion="1.6.0" condition="STM32F4 HAL DMA">
+        <package name="STM32F4xx_DFP" schemaVersion="1.3" url="http://www.keil.com/pack" vendor="Keil" version="2.11.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </component>
       <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="UART" Cvendor="Keil" Cversion="1.6.0" condition="STM32F4 HAL DMA">
         <package name="STM32F4xx_DFP" schemaVersion="1.3" url="http://www.keil.com/pack" vendor="Keil" version="2.11.0"/>
         <targetInfos>
@@ -599,6 +659,22 @@
         <instance index="0">RTE\Device\STM32F407VGTx\system_stm32f4xx.c</instance>
         <component Cclass="Device" Cgroup="Startup" Cvendor="Keil" Cversion="2.6.0" condition="STM32F4 CMSIS"/>
         <package name="STM32F4xx_DFP" schemaVersion="1.3" url="http://www.keil.com/pack" vendor="Keil" version="2.11.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </file>
+      <file attr="config" category="source" name="FileSystem\Config\FS_Config.c" version="6.2">
+        <instance index="0">RTE\File_System\FS_Config.c</instance>
+        <component Cbundle="MDK-Pro" Cclass="File System" Cgroup="CORE" Cvariant="SFN" Cvendor="Keil" Cversion="6.7.0" condition="CMSIS Core with RTOS and File System I/O"/>
+        <package name="MDK-Middleware" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="Keil" version="7.1.0"/>
+        <targetInfos>
+          <targetInfo name="Debug"/>
+        </targetInfos>
+      </file>
+      <file attr="config" category="source" name="FileSystem\Config\FS_Config_MC.h" version="6.2">
+        <instance index="0">RTE\File_System\FS_Config_MC_0.h</instance>
+        <component Cbundle="MDK-Pro" Cclass="File System" Cgroup="Drive" Csub="Memory Card" Cvendor="Keil" Cversion="6.7.0" condition="File System and SD/MMC Driver" maxInstances="2"/>
+        <package name="MDK-Middleware" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="Keil" version="7.1.0"/>
         <targetInfos>
           <targetInfo name="Debug"/>
         </targetInfos>

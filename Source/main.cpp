@@ -11,6 +11,7 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
+#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -46,7 +47,8 @@ void Error_Handler(void);
 int main(void)
 {
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-
+  osKernelInitialize();
+	
   HAL_Init();
 
   /* Configure the system clock */
@@ -61,6 +63,7 @@ int main(void)
   MX_ADC1_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_SPI3_Init();
   /* USER CODE BEGIN 2 */
 
   Main_Thread app;

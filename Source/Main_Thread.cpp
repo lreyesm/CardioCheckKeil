@@ -1,5 +1,8 @@
 #include "Main_Thread.h"
 
+#include "rl_fs.h"
+
+
 uint32_t oxy1=0;
 uint32_t oxy2=0;
 
@@ -276,7 +279,7 @@ uint32_t Main_Thread::crc32(const void *buf, size_t size)
 
 /*Thread function Generated Code*/
 /*End of Thread function Generated Code*/
-
+uint8_t count[50];
 void Main_Thread::userLoop()
 {
 
@@ -289,6 +292,35 @@ void Main_Thread::userLoop()
     std::uint32_t pos_func_buffer_0 =0;
     std::uint32_t pos_func_buffer_1 =0;
 
+	FILE *f;
+  // Initialize the M: drive.
+  if (finit ("M:") != fsOK) {
+    // error handling
+		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    
+  }
+  // Mount the M: drive.
+  if (fmount ("M:") != fsOK) {
+    // error handling
+		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+   
+  }
+  // Update a log file on SD card.
+  f = fopen ("M:\\shm.wav","r");
+  if (f == NULL) {
+    // error handling
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+  }
+  else {
+    // write data to file
+		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+		fread (&count[0], sizeof (uint8_t), 44, f);
+    fclose (f);
+  }
+  // The drive is no more needed.
+  funmount ("M:");
+  funinit ("M:");
+	
     while(true){
         eventWaitAny(signal, osWaitForever);
         receivedSignal = static_cast<eThread::ThreadEventFlags>(signal);
