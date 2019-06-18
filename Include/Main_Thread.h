@@ -11,6 +11,7 @@
 #include "usart.h"
 #include "gpio.h"
 #include "adc.h"
+#include "tim.h"
 
 #include "arm_math.h"
 
@@ -40,8 +41,9 @@
 //#define DATA_BUFFER_TRANSMIT_1 0x022
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define OXYMETER_1  1 //UART2
-#define OXYMETER_2  2 //UART3
+#define OXIMETER_1_ACTIVE  1  //CH0 el pegado a la fuente
+#define OXIMETER_2_ACTIVE  1  //CH1 el de mas arriba
+#define ADC_ACTIVE         1
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define SPO2_BUFFER_OXY1_POS DATA_INIT_BUFFER_POS //2
@@ -57,6 +59,8 @@
 
 #define INIT_PROG_ID 0x0AA   ////Inicio de Programa
 #define INIT_SEND_ID 0x0FE  ////Inicio de Envio de informacion
+#define INIT_SAVE_TO_SD 0x0FD  ////Inicio de salva de informacion en SD
+#define STOP_SAVE_TO_SD 0x0FC  ////Fin de salva de informacion en SD
 #define ERROR_ID 0x0F  ////Envio de Error de recivo
 
 //#define HEADER_END_POS 160
@@ -95,33 +99,35 @@ public:
 
     static void timeOut_timer_leds_function(void const *argument);    /*End of Timer public definitions*/
     
-   static const std::uint16_t INIT_PROCESS_CH0_HALF = eObject::eThread::EventFlag2; // me salte una pila de flags y puse #23 preguntar a tony por esto
+    static const std::uint16_t INIT_PROCESS_CH0_HALF = eObject::eThread::EventFlag2; // me salte una pila de flags y puse #23 preguntar a tony por esto
     
-   static const std::uint16_t INIT_PROCESS_CH0_FULL = eObject::eThread::EventFlag3;
+    static const std::uint16_t INIT_PROCESS_CH0_FULL = eObject::eThread::EventFlag3;
 
-   static const std::uint16_t INIT_PROCESS_CH1_HALF = eObject::eThread::EventFlag4; // me salte una pila de flags y puse #23 preguntar a tony por esto
+    static const std::uint16_t INIT_PROCESS_CH1_HALF = eObject::eThread::EventFlag4; // me salte una pila de flags y puse #23 preguntar a tony por esto
 
-   static const std::uint16_t INIT_PROCESS_CH1_FULL = eObject::eThread::EventFlag5;
-  
-   static const std::uint16_t INIT_TRANSMIT = eObject::eThread::EventFlag6;
-  
-   static const std::uint16_t Timer_timer_ADCPeriodic_Complete = eObject::eThread::EventFlag7;
+    static const std::uint16_t INIT_PROCESS_CH1_FULL = eObject::eThread::EventFlag5;
 
-   static const std::uint16_t INIT_PROGRAM = eObject::eThread::EventFlag8;
+    static const std::uint16_t INIT_TRANSMIT = eObject::eThread::EventFlag6;
 
-   static const std::uint16_t RECEIVE_COMMANDS = eObject::eThread::EventFlag9;
-   
-   
-static void timer_ADC_timeout(void const *argument);    /*End of Timer public definitions*/
+    static const std::uint16_t Timer_timer_ADCPeriodic_Complete = eObject::eThread::EventFlag7;
+
+    static const std::uint16_t INIT_PROGRAM = eObject::eThread::EventFlag8;
+
+    static const std::uint16_t RECEIVE_COMMANDS = eObject::eThread::EventFlag9;
+
+    static const std::uint16_t SAVE_TO_SD = eObject::eThread::EventFlag10;
+
+
+    static void timer_ADC_timeout(void const *argument);    /*End of Timer public definitions*/
     
     /*Main thread Constructor*/
     Main_Thread();
 
-typedef enum{
-	BUFFER_TRANSMIT_0 = 0,
-	BUFFER_TRANSMIT_1,
-	BUFFER_TRANSMIT_NONE,
-}BUFFER_StateTypeDef;
+    typedef enum{
+        BUFFER_TRANSMIT_0 = 0,
+        BUFFER_TRANSMIT_1,
+        BUFFER_TRANSMIT_NONE,
+    }BUFFER_StateTypeDef;
 
     ////Main function, this function is executed infinitely when app.exec() in main.cpp
     virtual void userLoop() E_DECLARE_OVERRIDE;
@@ -131,9 +137,11 @@ typedef enum{
     static bool CH1_Ready;
     static bool CH1_init_Ready;
     static bool ADC_Ready;
+		static bool ADC_Init_Ready;
     static bool start_transmit_ftdi;
     static bool start_transmit_bluetooth;
-		static bool error_sending;
+    static bool error_sending;
+    static bool saving_to_sd;
 
     static std::uint8_t current_oxymeter;
 
@@ -141,15 +149,17 @@ typedef enum{
 
     static std::uint8_t CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
-    static std::uint8_t CH2_read_buffer_0[16];
+
     static std::uint8_t CH3_read_buffer_0[16];
+    static std::uint8_t save_to_SD_buffer_0[16];
+    static std::uint8_t save_to_SD_buffer_1[16];
 
     static std::uint8_t CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
     static std::uint8_t CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
     static std::uint32_t CH0_function_buffer_storage_pos;
-		
+
     static std::uint8_t CH1_function_buffer_0[FUNCTION_BUFFER_SIZE];
-		static std::uint8_t CH1_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
+    static std::uint8_t CH1_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
     static std::uint32_t CH1_function_buffer_storage_pos;
 
     static std::uint8_t transmit_buffer_0[UART_SEND_BUFFER_SIZE];
@@ -166,9 +176,9 @@ typedef enum{
 
     static std::uint32_t adc_value;
     static std::uint16_t ADC_buffer[ADC_BUFFER_SIZE];
-		static std::uint8_t ADC_buffer_send_1[ADC_BUFFER_SIZE*2]; //por 2 porque es un entero de 8bits
-		static std::uint8_t ADC_buffer_send_2[ADC_BUFFER_SIZE*2];
-		static std::uint8_t current_ADC_Buffer;
+    static std::uint8_t ADC_buffer_send_1[ADC_BUFFER_SIZE*2]; //por 2 porque es un entero de 8bits
+    static std::uint8_t ADC_buffer_send_2[ADC_BUFFER_SIZE*2];
+    static std::uint8_t current_ADC_Buffer;
     static std::uint16_t ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
     static std::uint32_t ADC_buffer_pos;
     static std::uint32_t ADC_buffer_storage_pos;
@@ -203,11 +213,11 @@ private:
 
     eVirtualTimer timer_timer_leds;
 
-    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 1000;
+    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 10000;  ///Led azul
 
     eVirtualTimer timer_timer_ADC;
 
-    static const std::uint32_t TIMER_timer_ADC_PERIOD_MS = TIMER_TIMEOUT_ADC_READ;
+    static const std::uint32_t TIMER_timer_ADC_PERIOD_MS = TIMER_TIMEOUT_ADC_READ; //sustituir este timer por el TIM2 para iniciar conversion
 
 
     /*User declare thread objects functions*/
@@ -229,6 +239,8 @@ private:
     static BUFFER_StateTypeDef buffer_transmit;
 
     uint32_t crc32(const void *buf, size_t size);
+
+    bool save_to_file(void);
 
 };
 

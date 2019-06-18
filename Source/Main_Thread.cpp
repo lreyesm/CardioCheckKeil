@@ -59,9 +59,11 @@ bool Main_Thread::CH0_init_Ready = false;
 bool Main_Thread::CH1_Ready = false;
 bool Main_Thread::CH1_init_Ready = false;
 bool Main_Thread::ADC_Ready = false;
+bool Main_Thread::ADC_Init_Ready = false;
 bool Main_Thread::start_transmit_ftdi = false;
 bool Main_Thread::start_transmit_bluetooth = false;
 bool Main_Thread::error_sending = false;
+bool Main_Thread::saving_to_sd = false;
 
 std::uint8_t Main_Thread::current_oxymeter = 0;
 
@@ -69,8 +71,10 @@ std::uint8_t Main_Thread::write_buff[UART_SEND_TOTAL_SIZE];
 
 std::uint8_t Main_Thread::CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
-std::uint8_t Main_Thread::CH2_read_buffer_0[16];
+
 std::uint8_t Main_Thread::CH3_read_buffer_0[16];
+std::uint8_t Main_Thread::save_to_SD_buffer_0[16];
+std::uint8_t Main_Thread::save_to_SD_buffer_1[16];
 
 std::uint8_t Main_Thread::CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -138,6 +142,7 @@ Main_Thread::Main_Thread():
     timer_timer_ADC(timer_ADC_timeout, eVirtualTimer::Periodic),
     thread_transmit(thread_transmitRun,eObject::eThread::PriorityNormal )
 {
+	  
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
@@ -151,16 +156,10 @@ Main_Thread::Main_Thread():
 			Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;
 			Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;
 		}
-//		for(i=TAIL_START_POS; i<TAIL_START_POS+TAIL_SIZE ;++i){		
-//			Main_Thread::instance().transmit_buffer_0[i]=TAIL_ID;
-//			Main_Thread::instance().transmit_buffer_1[i]=TAIL_ID;
-//		}
-				 
-//    Main_Thread::instance().transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
-//    Main_Thread::instance().transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_INIT_BUFFER_ID;
 
     process_Receive_Commands.start();
-    HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
+		
+    //HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
     HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], 16);
 
     thread_Process_CH0.start();
@@ -177,7 +176,8 @@ Main_Thread::Main_Thread():
 
     HAL_ADC_Start_DMA(&hadc1, &adc_value, 1);
     thread_Read_ADC.start();
-    timer_timer_ADC.start(TIMER_timer_ADC_PERIOD_MS);
+		HAL_TIM_Base_Start_IT(&htim2);
+    //timer_timer_ADC.start(TIMER_timer_ADC_PERIOD_MS);
 }
 /*End of Main Thread Constructor Generated Code*/
 
@@ -263,6 +263,41 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
 
 void process_9B_buff_CH0(){}
 
+bool Main_Thread::save_to_file(void){
+
+    uint8_t count[50];
+
+    FILE *f;
+    // Initialize the M: drive.
+    if (finit ("M:") != fsOK) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+
+    }
+    // Mount the M: drive.
+    if (fmount ("M:") != fsOK) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+
+    }
+    // Update a log file on SD card.
+    f = fopen ("M:\\test.dat","ab");
+    if (f == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+    }
+    else {
+        // write data to file
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+        //fread (&count[0], sizeof (uint8_t), 44, f);
+			  fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),16,f);
+        fclose (f);
+    }
+    // The drive is no more needed.
+    funmount ("M:");
+    funinit ("M:");
+
+}
 //Funcion que calcula valor CRC-32---------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 uint32_t Main_Thread::crc32(const void *buf, size_t size)
@@ -279,7 +314,7 @@ uint32_t Main_Thread::crc32(const void *buf, size_t size)
 
 /*Thread function Generated Code*/
 /*End of Thread function Generated Code*/
-uint8_t count[50];
+
 void Main_Thread::userLoop()
 {
 
@@ -292,35 +327,7 @@ void Main_Thread::userLoop()
     std::uint32_t pos_func_buffer_0 =0;
     std::uint32_t pos_func_buffer_1 =0;
 
-	FILE *f;
-  // Initialize the M: drive.
-  if (finit ("M:") != fsOK) {
-    // error handling
-		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
-    
-  }
-  // Mount the M: drive.
-  if (fmount ("M:") != fsOK) {
-    // error handling
-		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
-   
-  }
-  // Update a log file on SD card.
-  f = fopen ("M:\\shm.wav","r");
-  if (f == NULL) {
-    // error handling
-    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
-  }
-  else {
-    // write data to file
-		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
-		fread (&count[0], sizeof (uint8_t), 44, f);
-    fclose (f);
-  }
-  // The drive is no more needed.
-  funmount ("M:");
-  funinit ("M:");
-	
+
     while(true){
         eventWaitAny(signal, osWaitForever);
         receivedSignal = static_cast<eThread::ThreadEventFlags>(signal);
@@ -332,23 +339,35 @@ void Main_Thread::userLoop()
         }
 
         if((receivedSignal & INIT_TRANSMIT) == INIT_TRANSMIT){
+					
+					  if(OXIMETER_1_ACTIVE != 1){ //Si no esta activo el Oximetro 1 no espero por el para transmitir						
+							   CH0_Ready = true;
+						}
+						if(OXIMETER_2_ACTIVE != 1){ //Si no esta activo el Oximetro 2 no espero por el para transmitir						
+							   CH1_Ready = true;
+						}
+						if(ADC_ACTIVE != 1){ //Si no esta activo el ADC no espero por el para transmitir						
+							   ADC_Ready = true;
+						}
+						
             if(CH0_Ready && CH1_Ready && ADC_Ready){
                 CH0_Ready = false;
                 CH1_Ready = false;
-
+                ADC_Ready = true;
+							
                 if(buffer_transmit == BUFFER_TRANSMIT_0){
 
                     //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 0--------------------------------------------
                     //std::memcpy( &transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS], &ADC_buffer_storage[pos], ADC_BUFFER_SIZE);
 
-									  c=0;
-									  for(i=0; i < ADC_BUFFER_SIZE ;++i){
-											
-											  c = i*2;
+                    c=0;
+                    for(i=0; i < ADC_BUFFER_SIZE ;++i){
+
+                        c = i*2;
                         transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS + c] = ((ADC_buffer_storage[pos + i]>>8) & 0x0FF);
-											  transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS + c + 1] = ((ADC_buffer_storage[pos + i]) & 0x0FF);
+                        transmit_buffer_0[DATA_GRAPH_HR_INIT_BUFFER_POS + c + 1] = ((ADC_buffer_storage[pos + i]) & 0x0FF);
                     }
-										
+
                     pos+=ADC_BUFFER_SIZE;
                     if(pos >= ADC_BUFFER_STORAGE_SIZE){
                         pos=0;
@@ -392,13 +411,13 @@ void Main_Thread::userLoop()
                     //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 1--------------------------------------------
                     //std::memcpy( &transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS], (uint8_t*)(&ADC_buffer_storage[pos]), ADC_BUFFER_SIZE*2);
                     c=0;
-									  for(i=0; i < ADC_BUFFER_SIZE ;++i){
-											
-											  c = i*2;
+                    for(i=0; i < ADC_BUFFER_SIZE ;++i){
+
+                        c = i*2;
                         transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS + c] = ((ADC_buffer_storage[pos + i]>>8) & 0x0FF);
-											  transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS + c + 1] = ((ADC_buffer_storage[pos + i]) & 0x0FF);
+                        transmit_buffer_1[DATA_GRAPH_HR_INIT_BUFFER_POS + c + 1] = ((ADC_buffer_storage[pos + i]) & 0x0FF);
                     }
-										
+
                     pos+=ADC_BUFFER_SIZE;
                     if(pos >= ADC_BUFFER_STORAGE_SIZE){
                         pos=0;
@@ -443,6 +462,14 @@ void Main_Thread::userLoop()
 
             HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_13);
         }
+        if((receivedSignal & SAVE_TO_SD) == SAVE_TO_SD){
+
+            if(saving_to_sd){
+
+                save_to_file();		
+            }
+						saving_to_sd = true;
+        }
     }
 
 }
@@ -455,8 +482,10 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
     eObject::eThread::ThreadEventFlags receivedSignal;
     bool init = true;
     bool init_prog = true;
+    bool init_save_to_sd = true;
+    bool stop_save_to_sd = true;
     bool retransmit = true;
-    std::uint8_t read_buff[32], read_buff_PC[32], i;
+    std::uint8_t read_buff[32], i;
 
     while(true){
         eventWaitAny(signal, osWaitForever);
@@ -464,52 +493,47 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
 
         if((receivedSignal & RECEIVE_COMMANDS) == RECEIVE_COMMANDS){
 
-            std::memcpy( read_buff_PC, CH2_read_buffer_0, sizeof(CH2_read_buffer_0));
             std::memcpy( read_buff, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
             init = true;
             init_prog = true;
+            init_save_to_sd = true;
+					  stop_save_to_sd = true;
 
+            ////////////Bluetooth or PC/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //--------------------------------------------------------------------
             for(i=0; i<16; i++){
-                if(read_buff_PC[i] != INIT_PROG_ID){
-                    init_prog = false;
+                if(read_buff[i] != STOP_SAVE_TO_SD){
+                    stop_save_to_sd = false;
                 }
             }
-            if(init_prog){
-                 NVIC_SystemReset();
+            if(stop_save_to_sd){
+                saving_to_sd = false;
             }
-            for(i=0; i<16; i++){
-                if(read_buff_PC[i] != INIT_SEND_ID){
-                    init = false;
-                }
-            }
-            if(init){
-                Main_Thread::instance().eventSet(INIT_PROGRAM);
-                Main_Thread::instance().timer_timer_led_red.start(TIMER_timer_led_red_PERIOD_MS);
+            //--------------------------------------------------------------------
+            if(saving_to_sd){
+                std::memcpy(save_to_SD_buffer_0, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
+                Main_Thread::instance().eventSet(SAVE_TO_SD);
                 continue;
             }
-            retransmit = true;
+            //--------------------------------------------------------------------
             for(i=0; i<16; i++){
-                if(read_buff_PC[i] != ERROR_ID){
-                    retransmit = false;
+                if(read_buff[i] != INIT_SAVE_TO_SD){
+                    init_save_to_sd = false;
                 }
             }
-            if(retransmit){
-                init = false;
-                Main_Thread::instance().timer_timer_led_green.restart();	
-							  error_sending=true;
+            if(init_save_to_sd){              
+                Main_Thread::instance().eventSet(SAVE_TO_SD);
             }
-            ////////////Bluetooth/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            init = true;
-            init_prog = true;
-
+            //--------------------------------------------------------------------
             for(i=0; i<16; i++){
                 if(read_buff[i] != INIT_PROG_ID){
                     init_prog = false;
                 }
             }
             if(init_prog){
-                 NVIC_SystemReset();
+                NVIC_SystemReset();
             }
+            //--------------------------------------------------------------------
             for(i=0; i<16; i++){
                 if(read_buff[i] != INIT_SEND_ID){
                     init = false;
@@ -520,6 +544,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
                 continue;
             }
+            //--------------------------------------------------------------------
             retransmit = true;
             for(i=0; i<16; i++){
                 if(read_buff[i] != ERROR_ID){
@@ -527,11 +552,12 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 }
             }
             if(retransmit){
-							  init = false;
+                init = false;
                 Main_Thread::instance().timer_timer_led_green.restart();
-                error_sending=true;							
+                error_sending=true;
                 continue;
             }
+            //--------------------------------------------------------------------
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
     }
@@ -553,7 +579,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
         eventWait(Timer_timer_ADCPeriodic_Complete);
 
         value_adc = adc_value;
-        ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits 
+        ADC_buffer[ADC_buffer_pos]= value_adc << 3;  //para adc_16bits
         ADC_buffer_pos++;
 
         if(ADC_buffer_pos >= ADC_BUFFER_SIZE){
@@ -575,8 +601,14 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
             std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff_16, sizeof(temp_buff_16));
             ADC_buffer_storage_pos+=ADC_BUFFER_SIZE;
             if(ADC_buffer_storage_pos >= ADC_BUFFER_STORAGE_SIZE){
-                ADC_Ready = true;
+                ADC_Init_Ready = true;
                 ADC_buffer_storage_pos = 0;
+            }
+						
+            if(Main_Thread::instance().ADC_Init_Ready){
+
+                Main_Thread::instance().ADC_Ready = true;
+                Main_Thread::instance().eventSet(Main_Thread::INIT_TRANSMIT);
             }
         }
     }
@@ -641,8 +673,8 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                         uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
-											  current_oxymeter = OXYMETER_2;
-											
+                        //current_oxymeter = OXYMETER_2;
+
                         SPO2 = CH1_processsing_buffer_0[i + 3];
 
                         BPM_L = CH1_processsing_buffer_0[i + 4];
@@ -650,8 +682,8 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                         PI_L = CH1_processsing_buffer_0[i + 6];
                         PI_H = CH1_processsing_buffer_0[i + 7];
-											
-											  STATUS_CHECK = CH1_processsing_buffer_0[i + 8];
+
+                        STATUS_CHECK = CH1_processsing_buffer_0[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -665,7 +697,7 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                             transmit_buffer_1[BPM_BUFFER_OXY2_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_OXY2_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_OXY2_POS+1] = PI_H;
-													  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
+                            transmit_buffer_1[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
@@ -674,7 +706,7 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                             transmit_buffer_0[BPM_BUFFER_OXY2_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_OXY2_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY2_POS+1] = PI_H;
-												  	transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
+                            transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -744,8 +776,8 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                         uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
-											  current_oxymeter = OXYMETER_2;
-											
+                        //current_oxymeter = OXYMETER_2;
+
                         SPO2 = CH1_processsing_buffer_1[i + 3];
 
                         BPM_L = CH1_processsing_buffer_1[i + 4];
@@ -753,8 +785,8 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                         PI_L = CH1_processsing_buffer_1[i + 6];
                         PI_H = CH1_processsing_buffer_1[i + 7];
-											
-											  STATUS_CHECK = CH1_processsing_buffer_1[i + 8];
+
+                        STATUS_CHECK = CH1_processsing_buffer_1[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -762,22 +794,22 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                         }
 
                         if(buffer_transmit == BUFFER_TRANSMIT_0){//oxy2
-													
+
                             transmit_buffer_1[SPO2_BUFFER_OXY2_POS] = SPO2;
                             transmit_buffer_1[BPM_BUFFER_OXY2_POS] = BPM_L;
                             transmit_buffer_1[BPM_BUFFER_OXY2_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_OXY2_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_OXY2_POS+1] = PI_H;
-													  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
+                            transmit_buffer_1[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-													
+
                             transmit_buffer_0[SPO2_BUFFER_OXY2_POS] = SPO2;
                             transmit_buffer_0[BPM_BUFFER_OXY2_POS] = BPM_L;
                             transmit_buffer_0[BPM_BUFFER_OXY2_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_OXY2_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY2_POS+1] = PI_H;
-													  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
+                            transmit_buffer_0[STATUS_CHECK_OXY2_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -869,8 +901,8 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
                     if(message_id == (uint8_t)DATA_INIT_BUFFER_ID){
 
                         uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
-											
-											  current_oxymeter = OXYMETER_1;
+
+                        //current_oxymeter = OXYMETER_1;
 
                         SPO2 = CH0_processsing_buffer_0[i + 3];
 
@@ -879,8 +911,8 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         PI_L = CH0_processsing_buffer_0[i + 6];
                         PI_H = CH0_processsing_buffer_0[i + 7];
-											
-											  STATUS_CHECK = CH0_processsing_buffer_0[i + 8];
+
+                        STATUS_CHECK = CH0_processsing_buffer_0[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -894,16 +926,16 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
                             transmit_buffer_1[BPM_BUFFER_OXY1_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_OXY1_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_OXY1_POS+1] = PI_H;
-													  transmit_buffer_1[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
+                            transmit_buffer_1[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
-  
-													  transmit_buffer_0[SPO2_BUFFER_OXY1_POS] = SPO2;
+
+                            transmit_buffer_0[SPO2_BUFFER_OXY1_POS] = SPO2;
                             transmit_buffer_0[BPM_BUFFER_OXY1_POS] = BPM_L;
                             transmit_buffer_0[BPM_BUFFER_OXY1_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_OXY1_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY1_POS+1] = PI_H;
-													  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
+                            transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -973,8 +1005,8 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         uint16_t SPO2, BPM_L, BPM_H, PI_L, PI_H, STATUS_CHECK;
 
-											  current_oxymeter = OXYMETER_1;
-											
+                        //current_oxymeter = OXYMETER_1;
+
                         SPO2 = CH0_processsing_buffer_1[i + 3];
 
                         BPM_L = CH0_processsing_buffer_1[i + 4];
@@ -982,8 +1014,8 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
 
                         PI_L = CH0_processsing_buffer_1[i + 6];
                         PI_H = CH0_processsing_buffer_1[i + 7];
-											
-											  STATUS_CHECK = CH0_processsing_buffer_1[i + 8];
+
+                        STATUS_CHECK = CH0_processsing_buffer_1[i + 8];
 
                         if(SPO2 > 100){  //Valor invalido
 
@@ -997,7 +1029,7 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
                             transmit_buffer_1[BPM_BUFFER_OXY1_POS+1] = BPM_H;
                             transmit_buffer_1[PI_BUFFER_OXY1_POS] = PI_L;
                             transmit_buffer_1[PI_BUFFER_OXY1_POS+1] = PI_H;
-													  transmit_buffer_1[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
+                            transmit_buffer_1[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
 
                         }else if(buffer_transmit == BUFFER_TRANSMIT_1){
 
@@ -1006,7 +1038,7 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
                             transmit_buffer_0[BPM_BUFFER_OXY1_POS+1] = BPM_H;
                             transmit_buffer_0[PI_BUFFER_OXY1_POS] = PI_L;
                             transmit_buffer_0[PI_BUFFER_OXY1_POS+1] = PI_H;
-													  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
+                            transmit_buffer_0[STATUS_CHECK_OXY1_POS] = STATUS_CHECK;
                         }
 
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -1056,7 +1088,7 @@ void Main_Thread::setBufferOffset(const BUFFER_StateTypeDef offset)
 void Main_Thread::timer_ADC_timeout(void const *argument){
 
     ////To set Event For This timer timeOut
-    Main_Thread::instance().thread_Read_ADC.eventSet(Timer_timer_ADCPeriodic_Complete);
+    //Main_Thread::instance().thread_Read_ADC.eventSet(Timer_timer_ADCPeriodic_Complete);
 
     ////To start this timer
     //timer_timer_ADC.start(TIMER_timer_ADC_PERIOD_MS);
@@ -1094,10 +1126,10 @@ void Main_Thread::timeOut_timer_led_green_function(void const *argument){
     ////To set Event For This timer timeOut
     //Main_Thread::instance().eventSet(Timer_timer_led_greenPeriodic_Complete);
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
-	  if(error_sending){
-	     Main_Thread::instance().eventSet(INIT_PROGRAM);
-		   error_sending=false;
-	  }
+    if(error_sending){
+        Main_Thread::instance().eventSet(INIT_PROGRAM);
+        error_sending=false;
+    }
     ////To start this timer
     //timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
 

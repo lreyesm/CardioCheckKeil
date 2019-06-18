@@ -12,6 +12,7 @@
 #include "adc.h"
 #include "dma.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -47,7 +48,9 @@ void Error_Handler(void);
 int main(void)
 {
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  osKernelInitialize();
+
+	
+	osKernelInitialize();
 	
   HAL_Init();
 
@@ -64,9 +67,15 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_SPI3_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+	
+  
   Main_Thread app;
+	
+//	if(osKernelRunning() == 0){
+//	    
+//	}
 
   app.exec();
 

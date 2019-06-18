@@ -76,6 +76,7 @@ extern ADC_HandleTypeDef hadc1;
 extern DMA_HandleTypeDef hdma_spi3_rx;
 extern DMA_HandleTypeDef hdma_spi3_tx;
 extern SPI_HandleTypeDef hspi3;
+extern TIM_HandleTypeDef htim2;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart1_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
@@ -172,7 +173,7 @@ void UsageFault_Handler(void)
   * @brief This function handles System service call via SWI instruction.
   */
 
-/* Deleted by NEOWizard */
+/* SVC_Handler Deleted by NEOWizard */
 
 
 /**
@@ -192,14 +193,14 @@ void DebugMon_Handler(void)
   * @brief This function handles Pendable request for system service.
   */
 
-/* Deleted by NEOWizard */
+/* PendSV_Handler Deleted by NEOWizard */
 
 
 /**
   * @brief This function handles System tick timer.
   */
 
-/* Deleted by NEOWizard */
+/* SysTick_Handler Deleted by NEOWizard */
 
 
 /******************************************************************************/
@@ -294,6 +295,20 @@ void ADC_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
   * @brief This function handles USART1 global interrupt.
   */
 void USART1_IRQHandler(void)
@@ -352,16 +367,9 @@ void DMA1_Stream7_IRQHandler(void)
 /**
   * @brief This function handles SPI3 global interrupt.
   */
-//void SPI3_IRQHandler(void)
-//{
-//  /* USER CODE BEGIN SPI3_IRQn 0 */
 
-//  /* USER CODE END SPI3_IRQn 0 */
-//  HAL_SPI_IRQHandler(&hspi3);
-//  /* USER CODE BEGIN SPI3_IRQn 1 */
+/* SPI3_IRQHandler Deleted by NEOWizard */
 
-//  /* USER CODE END SPI3_IRQn 1 */
-//}
 
 /**
   * @brief This function handles DMA2 stream0 global interrupt.

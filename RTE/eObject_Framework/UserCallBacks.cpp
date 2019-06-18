@@ -35,18 +35,23 @@ void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef *htim){
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 
-    uint32_t val[3];
+    //uint32_t val[3];
     if(hadc->Instance == ADC1){
 
-        val[0]= Main_Thread::instance().adc_value;
+        //val[0]= Main_Thread::instance().adc_value;
+			  Main_Thread::instance().thread_Read_ADC.eventSet(Main_Thread::Timer_timer_ADCPeriodic_Complete);
     }
+}
+
+void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef *htim){
+
+	  if(htim->Instance == TIM2){
+       //HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+    }   
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if(huart->Instance == USART1){
-        Main_Thread::instance().process_Receive_Commands.eventSet(Main_Thread::RECEIVE_COMMANDS);
-    }
     if(huart->Instance == USART2){
         Main_Thread::instance().thread_Process_CH0.eventSet(Main_Thread::INIT_PROCESS_CH0_FULL);
     }
@@ -60,9 +65,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart){
 
-    if(huart->Instance == USART1){			
-			  
-    }
     if(huart->Instance == USART2){
         Main_Thread::instance().thread_Process_CH0.eventSet(Main_Thread::INIT_PROCESS_CH0_HALF);
     }
@@ -78,9 +80,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if(huart->Instance == USART1){
-        HAL_UART_DMAStop(&huart1);
-    }
     if(huart->Instance == USART2){
         //Main_Thread::instance().thread_Process_CH0.eventSet(Main_Thread::INIT_PROCESS_CH0_FULL);
     }
