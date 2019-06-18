@@ -72,9 +72,9 @@ std::uint8_t Main_Thread::write_buff[UART_SEND_TOTAL_SIZE];
 std::uint8_t Main_Thread::CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
 
-std::uint8_t Main_Thread::CH3_read_buffer_0[16];
-std::uint8_t Main_Thread::save_to_SD_buffer_0[16];
-std::uint8_t Main_Thread::save_to_SD_buffer_1[16];
+std::uint8_t Main_Thread::CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
+std::uint8_t Main_Thread::save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
+std::uint8_t Main_Thread::save_to_SD_buffer_1[UART_READ_BUFFER_SIZE];
 
 std::uint8_t Main_Thread::CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -107,12 +107,12 @@ std::uint32_t Main_Thread::ADC_buffer_storage_pos=0;
 
 const float32_t fir_coefficient[NUM_TAPS]={
 
-    +0.00079608606945910762 , -0.001031330106504409  , -0.0032902656216684477  , -0.00376410753997351   ,  + 0.0010113988168697146 ,
-    +0.010490031988576395   ,  +0.01595748850158794     ,  +0.0055140408324335644   , -0.022078544154868061    , -0.047050338945306115  ,
-    -0.03599573649009815 ,	+0.032939702078991037  ,  +0.14578901832542709   ,  +0.2525245041074593 , +0.29637610427522909  ,
-    +0.2525245041074593    ,   +0.14578901832542709   , +0.032939702078991037  , -0.03599573649009815   , -0.047050338945306115  ,
-    -0.022078544154868061  , +0.0055140408324335644 , +0.01595748850158794 ,  +0.010490031988576395  , + 0.0010113988168697146 ,
-    -0.00376410753997351   , -0.0032902656216684477 , -0.001031330106504409  , + 0.00079608606945910762
+    +0.0010103811860354812, -0.00045811610763767032, -0.0030991693162776006, -0.0054070422836590172,-0.0035905054695007255,
+    +0.0044893161407239777 ,+ 0.013556796147238726,+ 0.011433006469166862 ,-0.010029928664181082 ,-0.041107603536671908 ,
+    -0.05244351602413698 ,-0.01312328930103062 ,+ 0.081971636676991505 , + 0.19861232633402243 ,+0.27904465702901166   ,
+    +0.27904465702901166  ,+0.19861232633402243 , +0.081971636676991505 ,-0.01312328930103062 ,-0.05244351602413698 ,
+    -0.041107603536671908  , -0.010029928664181082 ,+ 0.011433006469166862 ,+0.013556796147238726 ,+0.0044893161407239777,
+    -0.0035905054695007255 , -0.0054070422836590172  ,-0.0030991693162776006 , -0.00045811610763767032,+ 0.0010103811860354812 
 }; 
 
 const float32_t fir_coefficient_250Hz_Order10[NUM_TAPS]={
@@ -160,7 +160,7 @@ Main_Thread::Main_Thread():
     process_Receive_Commands.start();
 		
     //HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
-    HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], 16);
+    HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], UART_READ_BUFFER_SIZE);
 
     thread_Process_CH0.start();
 
@@ -281,7 +281,7 @@ bool Main_Thread::save_to_file(void){
 
     }
     // Update a log file on SD card.
-    f = fopen ("M:\\test.dat","ab");
+    f = fopen ("M:\\test.dat","wb");
     if (f == NULL) {
         // error handling
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -328,6 +328,7 @@ void Main_Thread::userLoop()
     std::uint32_t pos_func_buffer_1 =0;
 
 
+	  //save_to_file();
     while(true){
         eventWaitAny(signal, osWaitForever);
         receivedSignal = static_cast<eThread::ThreadEventFlags>(signal);
@@ -485,7 +486,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
     bool init_save_to_sd = true;
     bool stop_save_to_sd = true;
     bool retransmit = true;
-    std::uint8_t read_buff[32], i;
+    std::uint8_t read_buff[UART_READ_BUFFER_SIZE], i;
 
     while(true){
         eventWaitAny(signal, osWaitForever);
@@ -501,7 +502,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
 
             ////////////Bluetooth or PC/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //--------------------------------------------------------------------
-            for(i=0; i<16; i++){
+            for(i=0; i<4; i++){
                 if(read_buff[i] != STOP_SAVE_TO_SD){
                     stop_save_to_sd = false;
                 }
@@ -516,7 +517,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 continue;
             }
             //--------------------------------------------------------------------
-            for(i=0; i<16; i++){
+            for(i=0; i<4; i++){
                 if(read_buff[i] != INIT_SAVE_TO_SD){
                     init_save_to_sd = false;
                 }
@@ -525,7 +526,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 Main_Thread::instance().eventSet(SAVE_TO_SD);
             }
             //--------------------------------------------------------------------
-            for(i=0; i<16; i++){
+            for(i=0; i<4; i++){
                 if(read_buff[i] != INIT_PROG_ID){
                     init_prog = false;
                 }
@@ -534,12 +535,13 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 NVIC_SystemReset();
             }
             //--------------------------------------------------------------------
-            for(i=0; i<16; i++){
+            for(i=0; i<4; i++){
                 if(read_buff[i] != INIT_SEND_ID){
                     init = false;
                 }
             }
             if(init){
+							  //Main_Thread::save_to_file();
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
                 Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
                 continue;
@@ -572,7 +574,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
 
     std::uint8_t temp_buff[ADC_BUFFER_SIZE];
     std::uint16_t temp_buff_16[ADC_BUFFER_SIZE];
-    arm_fir_init_f32(&S, NUM_TAPS, (float32_t *)&fir_coefficient[0], &firState_f32[0], blockSize);
+    arm_fir_init_f32(&S, NUM_TAPS, (float32_t *)&fir_coefficient[0], &firState_f32[0], blockSize); //BLOCK_SIZE
 
     while(true){
 

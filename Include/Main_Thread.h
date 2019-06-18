@@ -80,7 +80,7 @@
 //#define TEST_LENGTH_SAMPLES  320
 #define SNR_THRESHOLD_F32    140.0f
 #define BLOCK_SIZE            ADC_BUFFER_SIZE
-#define NUM_TAPS              29
+#define NUM_TAPS              30 //Specific Order de filtro de Matlab + 1
 
 using namespace eObject;
 
@@ -150,9 +150,9 @@ public:
     static std::uint8_t CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
 
-    static std::uint8_t CH3_read_buffer_0[16];
-    static std::uint8_t save_to_SD_buffer_0[16];
-    static std::uint8_t save_to_SD_buffer_1[16];
+    static std::uint8_t CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
+    static std::uint8_t save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
+    static std::uint8_t save_to_SD_buffer_1[UART_READ_BUFFER_SIZE];
 
     static std::uint8_t CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
     static std::uint8_t CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -240,7 +240,7 @@ private:
 
     uint32_t crc32(const void *buf, size_t size);
 
-    bool save_to_file(void);
+    static bool save_to_file(void);
 
 };
 
