@@ -40,7 +40,7 @@
         #define RTE_Drivers_SPI5                /* Driver SPI5 */
         #define RTE_Drivers_SPI6                /* Driver SPI6 */
 #define RTE_FileSystem_Core             /* File System Core */
-          #define RTE_FileSystem_SFN              /* File System without Long Filename support */
+          #define RTE_FileSystem_LFN              /* File System with Long Filename support */
 #define RTE_FileSystem_Drive_MC_0       /* File System Memory Card Drive 0 */
 
 #endif /* RTE_COMPONENTS_H */

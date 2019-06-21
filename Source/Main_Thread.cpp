@@ -64,8 +64,7 @@ bool Main_Thread::start_transmit_ftdi = false;
 bool Main_Thread::start_transmit_bluetooth = false;
 bool Main_Thread::error_sending = false;
 bool Main_Thread::saving_to_sd = false;
-
-std::uint8_t Main_Thread::current_oxymeter = 0;
+FILE* Main_Thread::file;
 
 std::uint8_t Main_Thread::write_buff[UART_SEND_TOTAL_SIZE];
 
@@ -74,7 +73,10 @@ std::uint8_t Main_Thread::CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
 
 std::uint8_t Main_Thread::CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
 std::uint8_t Main_Thread::save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
-std::uint8_t Main_Thread::save_to_SD_buffer_1[UART_READ_BUFFER_SIZE];
+std::uint8_t Main_Thread::save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE];
+std::uint8_t Main_Thread::size_of_save_to_SD_buffer_0 = 0;
+std::uint32_t Main_Thread::function_value_pos_in_SD = 0;
+std::uint32_t Main_Thread::HR_value_pos_in_SD=0;
 
 std::uint8_t Main_Thread::CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -98,9 +100,6 @@ uint16_t Main_Thread::CH1_buffer_pos = 0;
 
 std::uint32_t Main_Thread::adc_value=0;
 std::uint16_t Main_Thread::ADC_buffer[ADC_BUFFER_SIZE];
-std::uint8_t Main_Thread::ADC_buffer_send_1[ADC_BUFFER_SIZE*2];
-std::uint8_t Main_Thread::ADC_buffer_send_2[ADC_BUFFER_SIZE*2];
-std::uint8_t Main_Thread::current_ADC_Buffer=1;
 std::uint16_t Main_Thread::ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
 std::uint32_t Main_Thread::ADC_buffer_pos=0;
 std::uint32_t Main_Thread::ADC_buffer_storage_pos=0;
@@ -146,6 +145,12 @@ Main_Thread::Main_Thread():
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
+	  for(i=0; i<UART_READ_BUFFER_SIZE ;++i){ 
+		
+		  Main_Thread::instance().save_to_SD_buffer_signals[i]=0;
+
+		}
+			
     for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ 
 		
 		  Main_Thread::instance().transmit_buffer_0[i]=0;
@@ -263,11 +268,79 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
 
 void process_9B_buff_CH0(){}
 
-bool Main_Thread::save_to_file(void){
+bool Main_Thread::save_to_file_pacient_signals(const uint16_t size){
+	
+    uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42 + function_value_pos_in_SD;
+	  uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
+	  uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
+	  
+	  file = fopen ("M:\\pacient_data_temp.dat","r+");
+	
+    if (file == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
 
-    uint8_t count[50];
+    }
+    else {
+        // write data to file
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+			
+			  fseek(file, function_0_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para 
+			
+			  fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
+			
+				fseek(file, function_1_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para 
+			
+			  fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS + FUNCTION_BUFFER_SIZE], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
+			
+			  fseek(file, ADC_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para 
+			
+			  fwrite(&save_to_SD_buffer_signals[0], sizeof (uint8_t), ADC_BUFFER_SIZE_IN_8BITS , file);
+			
+			  function_value_pos_in_SD += FUNCTION_BUFFER_SIZE;
+        HR_value_pos_in_SD += ADC_BUFFER_SIZE_IN_8BITS;
+			
+			  if(function_value_pos_in_SD >= DATA_FUNCTION_SIZE){
+				
+					  function_value_pos_in_SD = 0;
+					  HR_value_pos_in_SD = 0;
+				}
+			
+        fclose (file);
 
-    FILE *f;
+    }
+}
+
+bool Main_Thread::check_if_SD_is_functional(void){
+	
+	    // Initialize the M: drive.
+    if (finit ("M:") != fsOK) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+    }
+    // Mount the M: drive.
+    if (fmount ("M:") != fsOK) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);        
+    }
+		
+	  file = fopen ("M:\\test.dat","w");
+    if (file == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+    }
+    else {
+        // write data to file
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+        fclose (file);			  
+    }
+	  funmount ("M:");
+    funinit ("M:");
+}
+
+bool Main_Thread::save_to_file_pacient_data(void){
+
+    
     // Initialize the M: drive.
     if (finit ("M:") != fsOK) {
         // error handling
@@ -281,22 +354,48 @@ bool Main_Thread::save_to_file(void){
 
     }
     // Update a log file on SD card.
-    f = fopen ("M:\\test.dat","wb");
-    if (f == NULL) {
+    file = fopen ("M:\\pacient_data_temp.dat","w");
+    if (file == NULL) {
         // error handling
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
     }
-    else {
+    else {                                           //SPO2  BPM    PI        function size      ADC data Size
+			  uint32_t i = 0, sizes[8], sizes_reverse[8] = {DATA_FUNCTION_SIZE, DATA_ADC_BUFFER_SIZE, 
+				                                              SPO2_FUNCTION_BUFFER_SIZE, SPO2_FUNCTION_BUFFER_SIZE,
+				                                              BPM_FUNCTION_BUFFER_SIZE, BPM_FUNCTION_BUFFER_SIZE,
+				                                              PI_FUNCTION_BUFFER_SIZE, PI_FUNCTION_BUFFER_SIZE};
+				uint8_t 	prom_values[10]={ 99, 99, 00, 72, 00, 72, 17, 148, 17, 148};	
+					
+				for(i=0; i < 8; i++){  ////espacio para buffers
+					
+					  sizes[i] = (sizes_reverse[i]<<24 & 0x0FF000000);
+					  sizes[i] |= (sizes_reverse[i]<<8 & 0x0FF0000);
+					  sizes[i] |= (sizes_reverse[i]>>8 & 0x0FF00);
+					  sizes[i] |= (sizes_reverse[i]>>24 & 0x0FF);
+				}
+				
         // write data to file
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
         //fread (&count[0], sizeof (uint8_t), 44, f);
-			  fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),16,f);
-        fclose (f);
+			  fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
+																											
+				//fseek(file, size_of_save_to_SD_buffer_0, SEEK_SET);
+			
+				fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+				
+			  fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
+			
+			  for(i=0; i < TOTAL_SIGNALS_SIZE; i+=250){  ////espacio para buffers
+				  
+					  fwrite(&save_to_SD_buffer_signals[0],sizeof (uint8_t), 250,file);
+				}
+        fclose (file);
+
     }
     // The drive is no more needed.
-    funmount ("M:");
-    funinit ("M:");
-
+    //funmount ("M:");
+    //funinit ("M:");
 }
 //Funcion que calcula valor CRC-32---------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -327,8 +426,8 @@ void Main_Thread::userLoop()
     std::uint32_t pos_func_buffer_0 =0;
     std::uint32_t pos_func_buffer_1 =0;
 
-
-	  //save_to_file();
+    check_if_SD_is_functional();
+	  
     while(true){
         eventWaitAny(signal, osWaitForever);
         receivedSignal = static_cast<eThread::ThreadEventFlags>(signal);
@@ -388,7 +487,7 @@ void Main_Thread::userLoop()
                         pos_func_buffer_1=0;
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
-                    //transmit_buffer_0[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_0;
+                    
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
 
                     for(i=0; i<4 ;++i){
@@ -399,10 +498,11 @@ void Main_Thread::userLoop()
                     std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
                     if(start_transmit_ftdi){
+											
+											  std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);											  
                         HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
-                    }
-                    if(start_transmit_bluetooth){
-                        HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
+											  save_to_file_pacient_signals(250);
+											  
                     }
 
                     buffer_transmit = BUFFER_TRANSMIT_1;
@@ -450,11 +550,12 @@ void Main_Thread::userLoop()
                     std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
                     if(start_transmit_ftdi){
+											
+											  std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);	
                         HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
+											  save_to_file_pacient_signals(250);
                     }
-                    if(start_transmit_bluetooth){
-                        HAL_UART_Transmit_DMA(&huart1, write_buff, UART_SEND_TOTAL_SIZE);
-                    }
+
                     buffer_transmit = BUFFER_TRANSMIT_0;
                 }
             }
@@ -467,7 +568,7 @@ void Main_Thread::userLoop()
 
             if(saving_to_sd){
 
-                save_to_file();		
+                //save_to_file();		
             }
 						saving_to_sd = true;
         }
@@ -541,14 +642,18 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 }
             }
             if(init){
-							  //Main_Thread::save_to_file();
+							
+							  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+							  std::memcpy(save_to_SD_buffer_0, &read_buff[5], read_buff[4]);
+							  size_of_save_to_SD_buffer_0 = read_buff[4];
+							  Main_Thread::save_to_file_pacient_data();
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
                 Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
                 continue;
             }
             //--------------------------------------------------------------------
             retransmit = true;
-            for(i=0; i<16; i++){
+            for(i=0; i<4; i++){
                 if(read_buff[i] != ERROR_ID){
                     retransmit = false;
                 }
@@ -596,8 +701,13 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
 
             arm_float_to_q15(&outputF32[0], (q15_t*)&temp_buff_16[0], ADC_BUFFER_SIZE);
 
-            for(i=0; i<ADC_BUFFER_SIZE ;++i){
+            for(i=0; i<ADC_BUFFER_SIZE ;++i){  //Elimino el signo y lo subo a 16bits
                 temp_buff_16[i] = temp_buff_16[i]<<1;
+            }
+						
+						
+            for(i=0; i<ADC_BUFFER_SIZE ;++i){  //Lo bajo a resolucion de 12bits
+                temp_buff_16[i] = temp_buff_16[i]>>4;
             }
 
             std::memcpy( &ADC_buffer_storage[ADC_buffer_storage_pos], temp_buff_16, sizeof(temp_buff_16));

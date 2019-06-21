@@ -20,9 +20,11 @@
 //#define OXIMETER_DUAL_ADC
 
 #define FUNCTION_BUFFER_SIZE 25
+#define FUNCTION_BUFFER_SIZE_TOTAL FUNCTION_BUFFER_SIZE*2
 #define FUNCTION_BUFFER_STORAGE_SIZE FUNCTION_BUFFER_SIZE*4
 
 #define ADC_BUFFER_SIZE 100
+#define ADC_BUFFER_SIZE_IN_8BITS ADC_BUFFER_SIZE*2
 #define ADC_BUFFER_STORAGE_SIZE ADC_BUFFER_SIZE*4
 #define TIMER_TIMEOUT_ADC_READ 4 ////en milisegundos
 
@@ -54,8 +56,8 @@
 #define PI_BUFFER_OXY2_POS SPO2_BUFFER_OXY2_POS+3 //10
 
 #define DATA_GRAPH_HR_INIT_BUFFER_POS DATA_INIT_BUFFER_POS+10 //12
-#define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS + ADC_BUFFER_SIZE*2 //210 //por 2 porque adc buffer es de 16bits
-#define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //235
+#define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS + ADC_BUFFER_SIZE*2 //212 //por 2 porque adc buffer es de 16bits
+#define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //237
 
 #define INIT_PROG_ID 0x0AA   ////Inicio de Programa
 #define INIT_SEND_ID 0x0FE  ////Inicio de Envio de informacion
@@ -76,6 +78,16 @@
 #define UART_SEND_TOTAL_SIZE UART_SEND_BUFFER_SIZE + CHECK_SUM_SIZE //268
 
 #define UART_READ_BUFFER_SIZE 256
+
+#define MAX_TIME_RECORDING 300////en segundos (solo valores pares)
+#define DATA_FUNCTION_SIZE  (int)(FUNCTION_BUFFER_SIZE*MAX_TIME_RECORDING*2.5)  ////FUNCTION_BUFFER_SIZE * 150
+#define DATA_ADC_BUFFER_SIZE  (int)(ADC_BUFFER_SIZE*MAX_TIME_RECORDING*2.5)  ////
+#define SPO2_TIME_RECORDING MAX_TIME_RECORDING //en segundos
+#define SPO2_FUNCTION_BUFFER_SIZE int(SPO2_TIME_RECORDING*2.5)
+#define BPM_FUNCTION_BUFFER_SIZE SPO2_FUNCTION_BUFFER_SIZE
+#define PI_FUNCTION_BUFFER_SIZE SPO2_FUNCTION_BUFFER_SIZE
+
+#define TOTAL_SIGNALS_SIZE DATA_FUNCTION_SIZE*2+DATA_ADC_BUFFER_SIZE*2+SPO2_FUNCTION_BUFFER_SIZE*2+BPM_FUNCTION_BUFFER_SIZE*4+PI_FUNCTION_BUFFER_SIZE*4
 
 //#define TEST_LENGTH_SAMPLES  320
 #define SNR_THRESHOLD_F32    140.0f
@@ -143,8 +155,6 @@ public:
     static bool error_sending;
     static bool saving_to_sd;
 
-    static std::uint8_t current_oxymeter;
-
     static std::uint8_t write_buff[UART_SEND_TOTAL_SIZE];
 
     static std::uint8_t CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
@@ -152,7 +162,11 @@ public:
 
     static std::uint8_t CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
-    static std::uint8_t save_to_SD_buffer_1[UART_READ_BUFFER_SIZE];
+    static std::uint8_t save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE];
+		
+		static std::uint8_t size_of_save_to_SD_buffer_0;	
+		static std::uint32_t function_value_pos_in_SD;
+    static std::uint32_t HR_value_pos_in_SD;
 
     static std::uint8_t CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
     static std::uint8_t CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -176,9 +190,6 @@ public:
 
     static std::uint32_t adc_value;
     static std::uint16_t ADC_buffer[ADC_BUFFER_SIZE];
-    static std::uint8_t ADC_buffer_send_1[ADC_BUFFER_SIZE*2]; //por 2 porque es un entero de 8bits
-    static std::uint8_t ADC_buffer_send_2[ADC_BUFFER_SIZE*2];
-    static std::uint8_t current_ADC_Buffer;
     static std::uint16_t ADC_buffer_storage[ADC_BUFFER_STORAGE_SIZE];
     static std::uint32_t ADC_buffer_pos;
     static std::uint32_t ADC_buffer_storage_pos;
@@ -203,6 +214,9 @@ public:
     void process_9A_buff_CH1(std::uint8_t function_value);
 
 private:
+	
+    static FILE *file;
+
     eVirtualTimer timer_timer_led_green;
 
     static const std::uint32_t TIMER_timer_led_green_PERIOD_MS = 2000;
@@ -240,7 +254,9 @@ private:
 
     uint32_t crc32(const void *buf, size_t size);
 
-    static bool save_to_file(void);
+    static bool save_to_file_pacient_data(void);
+		static bool save_to_file_pacient_signals(const uint16_t size);
+		static bool check_if_SD_is_functional(void);
 
 };
 
