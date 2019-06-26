@@ -111,8 +111,8 @@ const float32_t fir_coefficient[NUM_TAPS]={
     -0.05244351602413698 ,-0.01312328930103062 ,+ 0.081971636676991505 , + 0.19861232633402243 ,+0.27904465702901166   ,
     +0.27904465702901166  ,+0.19861232633402243 , +0.081971636676991505 ,-0.01312328930103062 ,-0.05244351602413698 ,
     -0.041107603536671908  , -0.010029928664181082 ,+ 0.011433006469166862 ,+0.013556796147238726 ,+0.0044893161407239777,
-    -0.0035905054695007255 , -0.0054070422836590172  ,-0.0030991693162776006 , -0.00045811610763767032,+ 0.0010103811860354812 
-}; 
+    -0.0035905054695007255 , -0.0054070422836590172  ,-0.0030991693162776006 , -0.00045811610763767032,+ 0.0010103811860354812
+};
 
 const float32_t fir_coefficient_250Hz_Order10[NUM_TAPS]={
 
@@ -138,32 +138,31 @@ Main_Thread::Main_Thread():
     thread_Read_ADC(thread_Read_ADCRun,eObject::eThread::PriorityNormal ),
     thread_Process_CH1(thread_Process_CH1Run,eObject::eThread::PriorityNormal ),
     thread_Process_CH0(thread_Process_CH0Run,eObject::eThread::PriorityNormal ),
-    timer_timer_ADC(timer_ADC_timeout, eVirtualTimer::Periodic),
-    thread_transmit(thread_transmitRun,eObject::eThread::PriorityNormal )
+    timer_timer_ADC(timer_ADC_timeout, eVirtualTimer::Periodic)
 {
-	  
+
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
-	  for(i=0; i<UART_READ_BUFFER_SIZE ;++i){ 
-		
-		  Main_Thread::instance().save_to_SD_buffer_signals[i]=0;
+    for(i=0; i<UART_READ_BUFFER_SIZE ;++i){
 
-		}
-			
-    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){ 
-		
-		  Main_Thread::instance().transmit_buffer_0[i]=0;
-		  Main_Thread::instance().transmit_buffer_1[i]=0;
-		}
-   
-		for(i=HEADER_START_POS; i<HEADER_SIZE ;++i){		
-			Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;
-			Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;
-		}
+        Main_Thread::instance().save_to_SD_buffer_signals[i]=0;
+
+    }
+
+    for(i=0; i<UART_SEND_BUFFER_SIZE ;++i){
+
+        Main_Thread::instance().transmit_buffer_0[i]=0;
+        Main_Thread::instance().transmit_buffer_1[i]=0;
+    }
+
+    for(i=HEADER_START_POS; i<HEADER_SIZE ;++i){
+        Main_Thread::instance().transmit_buffer_0[i]=HEADER_ID;
+        Main_Thread::instance().transmit_buffer_1[i]=HEADER_ID;
+    }
 
     process_Receive_Commands.start();
-		
+
     //HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
     HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], UART_READ_BUFFER_SIZE);
 
@@ -181,7 +180,7 @@ Main_Thread::Main_Thread():
 
     HAL_ADC_Start_DMA(&hadc1, &adc_value, 1);
     thread_Read_ADC.start();
-		HAL_TIM_Base_Start_IT(&htim2);
+    HAL_TIM_Base_Start_IT(&htim2);
     //timer_timer_ADC.start(TIMER_timer_ADC_PERIOD_MS);
 }
 /*End of Main Thread Constructor Generated Code*/
@@ -269,13 +268,13 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
 void process_9B_buff_CH0(){}
 
 bool Main_Thread::save_to_file_pacient_signals(const uint16_t size){
-	
+
     uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42 + function_value_pos_in_SD;
-	  uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
-	  uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
-	  
-	  file = fopen ("M:\\pacient_data_temp.dat","r+");
-	
+    uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
+    uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
+
+    file = fopen ("M:\\pacient_data_temp.dat","r+");
+
     if (file == NULL) {
         // error handling
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -284,36 +283,36 @@ bool Main_Thread::save_to_file_pacient_signals(const uint16_t size){
     else {
         // write data to file
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
-			
-			  fseek(file, function_0_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para 
-			
-			  fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
-			
-				fseek(file, function_1_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para 
-			
-			  fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS + FUNCTION_BUFFER_SIZE], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
-			
-			  fseek(file, ADC_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para 
-			
-			  fwrite(&save_to_SD_buffer_signals[0], sizeof (uint8_t), ADC_BUFFER_SIZE_IN_8BITS , file);
-			
-			  function_value_pos_in_SD += FUNCTION_BUFFER_SIZE;
+
+        fseek(file, function_0_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para
+
+        fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
+
+        fseek(file, function_1_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para
+
+        fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS + FUNCTION_BUFFER_SIZE], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
+
+        fseek(file, ADC_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para
+
+        fwrite(&save_to_SD_buffer_signals[0], sizeof (uint8_t), ADC_BUFFER_SIZE_IN_8BITS , file);
+
+        function_value_pos_in_SD += FUNCTION_BUFFER_SIZE;
         HR_value_pos_in_SD += ADC_BUFFER_SIZE_IN_8BITS;
-			
-			  if(function_value_pos_in_SD >= DATA_FUNCTION_SIZE){
-				
-					  function_value_pos_in_SD = 0;
-					  HR_value_pos_in_SD = 0;
-				}
-			
+
+        if(function_value_pos_in_SD >= DATA_FUNCTION_SIZE){
+
+            function_value_pos_in_SD = 0;
+            HR_value_pos_in_SD = 0;
+        }
+
         fclose (file);
 
     }
 }
 
 bool Main_Thread::check_if_SD_is_functional(void){
-	
-	    // Initialize the M: drive.
+
+    // Initialize the M: drive.
     if (finit ("M:") != fsOK) {
         // error handling
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
@@ -321,10 +320,10 @@ bool Main_Thread::check_if_SD_is_functional(void){
     // Mount the M: drive.
     if (fmount ("M:") != fsOK) {
         // error handling
-        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);        
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
     }
-		
-	  file = fopen ("M:\\test.dat","w");
+
+    file = fopen ("M:\\test.dat","w");
     if (file == NULL) {
         // error handling
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -332,15 +331,15 @@ bool Main_Thread::check_if_SD_is_functional(void){
     else {
         // write data to file
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
-        fclose (file);			  
+        fclose (file);
     }
-	  funmount ("M:");
+    funmount ("M:");
     funinit ("M:");
 }
 
 bool Main_Thread::save_to_file_pacient_data(void){
 
-    
+
     // Initialize the M: drive.
     if (finit ("M:") != fsOK) {
         // error handling
@@ -361,35 +360,35 @@ bool Main_Thread::save_to_file_pacient_data(void){
 
     }
     else {                                           //SPO2  BPM    PI        function size      ADC data Size
-			  uint32_t i = 0, sizes[8], sizes_reverse[8] = {DATA_FUNCTION_SIZE, DATA_ADC_BUFFER_SIZE, 
-				                                              SPO2_FUNCTION_BUFFER_SIZE, SPO2_FUNCTION_BUFFER_SIZE,
-				                                              BPM_FUNCTION_BUFFER_SIZE, BPM_FUNCTION_BUFFER_SIZE,
-				                                              PI_FUNCTION_BUFFER_SIZE, PI_FUNCTION_BUFFER_SIZE};
-				uint8_t 	prom_values[10]={ 99, 99, 00, 72, 00, 72, 17, 148, 17, 148};	
-					
-				for(i=0; i < 8; i++){  ////espacio para buffers
-					
-					  sizes[i] = (sizes_reverse[i]<<24 & 0x0FF000000);
-					  sizes[i] |= (sizes_reverse[i]<<8 & 0x0FF0000);
-					  sizes[i] |= (sizes_reverse[i]>>8 & 0x0FF00);
-					  sizes[i] |= (sizes_reverse[i]>>24 & 0x0FF);
-				}
-				
+        uint32_t i = 0, sizes[8], sizes_reverse[8] = {DATA_FUNCTION_SIZE, DATA_ADC_BUFFER_SIZE,
+                                                      SPO2_FUNCTION_BUFFER_SIZE, SPO2_FUNCTION_BUFFER_SIZE,
+                                                      BPM_FUNCTION_BUFFER_SIZE, BPM_FUNCTION_BUFFER_SIZE,
+                                                      PI_FUNCTION_BUFFER_SIZE, PI_FUNCTION_BUFFER_SIZE};
+        uint8_t 	prom_values[10]={ 99, 99, 00, 72, 00, 72, 17, 148, 17, 148};
+
+        for(i=0; i < 8; i++){  ////espacio para buffers
+
+            sizes[i] = (sizes_reverse[i]<<24 & 0x0FF000000);
+            sizes[i] |= (sizes_reverse[i]<<8 & 0x0FF0000);
+            sizes[i] |= (sizes_reverse[i]>>8 & 0x0FF00);
+            sizes[i] |= (sizes_reverse[i]>>24 & 0x0FF);
+        }
+
         // write data to file
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
         //fread (&count[0], sizeof (uint8_t), 44, f);
-			  fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
-																											
-				//fseek(file, size_of_save_to_SD_buffer_0, SEEK_SET);
-			
-				fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
-				
-			  fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
-			
-			  for(i=0; i < TOTAL_SIGNALS_SIZE; i+=250){  ////espacio para buffers
-				  
-					  fwrite(&save_to_SD_buffer_signals[0],sizeof (uint8_t), 250,file);
-				}
+        fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
+
+        //fseek(file, size_of_save_to_SD_buffer_0, SEEK_SET);
+
+        fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+
+        fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
+
+        for(i=0; i < TOTAL_SIGNALS_SIZE; i+=250){  ////espacio para buffers
+
+            fwrite(&save_to_SD_buffer_signals[0],sizeof (uint8_t), 250,file);
+        }
         fclose (file);
 
     }
@@ -397,6 +396,298 @@ bool Main_Thread::save_to_file_pacient_data(void){
     //funmount ("M:");
     //funinit ("M:");
 }
+
+
+bool Main_Thread::save_pacient_data_to_database(void){
+
+    file = fopen ("M:\\pacient_data_temp.dat","r");
+    if (file == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+    }
+    else {                                           //SPO2  BPM    PI        function size      ADC data Size
+        uint32_t i = 0, sizes[8], sizes_reverse[8];/* = {DATA_FUNCTION_SIZE, DATA_ADC_BUFFER_SIZE,
+                                                      SPO2_FUNCTION_BUFFER_SIZE, SPO2_FUNCTION_BUFFER_SIZE,
+                                                      BPM_FUNCTION_BUFFER_SIZE, BPM_FUNCTION_BUFFER_SIZE,
+                                                      PI_FUNCTION_BUFFER_SIZE, PI_FUNCTION_BUFFER_SIZE};*/
+        uint8_t prom_values[10];
+
+        /*for(i=0; i < 8; i++){  ////espacio para buffers
+
+            sizes[i] = (sizes_reverse[i]<<24 & 0x0FF000000);
+            sizes[i] |= (sizes_reverse[i]<<8 & 0x0FF0000);
+            sizes[i] |= (sizes_reverse[i]>>8 & 0x0FF00);
+            sizes[i] |= (sizes_reverse[i]>>24 & 0x0FF);
+        }*/
+
+        // read data from file
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+        fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
+
+        fread(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+
+        fread(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
+
+        fclose (file);
+
+
+
+        file = fopen ("M:\\base_datos_oximetria.dat","a");
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+            fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);
+
+            fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+
+            fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
+
+            fclose (file);
+        }
+    }
+}
+
+bool Main_Thread::save_pacient_signals_to_database(void){
+
+
+    uint32_t function_value_pos_in_SD_old = function_value_pos_in_SD;
+    uint32_t HR_value_pos_in_SD_old = HR_value_pos_in_SD;
+
+    uint32_t i = 0;
+    uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42 + function_value_pos_in_SD;
+    uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
+    uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
+
+      FILE file_write;
+    for(i = function_value_pos_in_SD_old; i<DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+
+        file = fopen ("M:\\pacient_data_temp.dat","r");
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, function_0_data_offset, SEEK_SET);
+
+            function_0_data_offset+=FUNCTION_BUFFER_SIZE;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
+
+            fclose (file);
+
+            file = fopen ("M:\\base_datos_oximetria.dat","a");
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+
+                fclose (file);
+            }
+        }
+    }
+
+    function_0_data_offset = size_of_save_to_SD_buffer_0 + 42;
+
+    for(i = 0; i < function_value_pos_in_SD_old; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+
+        file = fopen ("M:\\pacient_data_temp.dat","r");
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, function_0_data_offset, SEEK_SET);
+
+            function_0_data_offset+=FUNCTION_BUFFER_SIZE;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
+
+            fclose (file);
+
+            file = fopen ("M:\\base_datos_oximetria.dat","a");
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+
+                fclose (file);
+            }
+        }
+    }
+
+
+
+    for(i = function_value_pos_in_SD_old; i<DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+
+        file = fopen ("M:\\pacient_data_temp.dat","r");
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, function_1_data_offset, SEEK_SET);
+
+            function_1_data_offset+=FUNCTION_BUFFER_SIZE;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
+
+            fclose (file);
+
+            file = fopen ("M:\\base_datos_oximetria.dat","a");
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+
+                fclose (file);
+            }
+        }
+    }
+
+    function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE;
+
+    for(i = 0; i < function_value_pos_in_SD_old; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+
+        file = fopen ("M:\\pacient_data_temp.dat","r");
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, function_1_data_offset, SEEK_SET);
+
+            function_1_data_offset+=FUNCTION_BUFFER_SIZE;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
+
+            fclose (file);
+
+            file = fopen ("M:\\base_datos_oximetria.dat","a");
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+
+                fclose (file);
+            }
+        }
+    }
+
+
+
+    for(i = HR_value_pos_in_SD_old; i<DATA_ADC_BUFFER_SIZE; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///Function 0
+
+        file = fopen ("M:\\pacient_data_temp.dat","r");
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, ADC_data_offset, SEEK_SET);
+
+            ADC_data_offset+=ADC_BUFFER_SIZE_IN_8BITS;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);  ///datos del paciente
+
+            fclose (file);
+
+            file = fopen ("M:\\base_datos_oximetria.dat","a");
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);
+
+                fclose (file);
+            }
+        }
+    }
+
+    ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2);
+
+    for(i = 0; i < HR_value_pos_in_SD_old; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///Function 0
+
+        file = fopen ("M:\\pacient_data_temp.dat","r");
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, ADC_data_offset, SEEK_SET);
+
+            ADC_data_offset+=ADC_BUFFER_SIZE_IN_8BITS;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);  ///datos del paciente
+
+            fclose(file);
+
+            file = fopen ("M:\\base_datos_oximetria.dat","a");
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);
+
+                fclose (file);
+            }
+        }
+    }
+}
+
 //Funcion que calcula valor CRC-32---------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 uint32_t Main_Thread::crc32(const void *buf, size_t size)
@@ -427,7 +718,7 @@ void Main_Thread::userLoop()
     std::uint32_t pos_func_buffer_1 =0;
 
     check_if_SD_is_functional();
-	  
+
     while(true){
         eventWaitAny(signal, osWaitForever);
         receivedSignal = static_cast<eThread::ThreadEventFlags>(signal);
@@ -439,22 +730,22 @@ void Main_Thread::userLoop()
         }
 
         if((receivedSignal & INIT_TRANSMIT) == INIT_TRANSMIT){
-					
-					  if(OXIMETER_1_ACTIVE != 1){ //Si no esta activo el Oximetro 1 no espero por el para transmitir						
-							   CH0_Ready = true;
-						}
-						if(OXIMETER_2_ACTIVE != 1){ //Si no esta activo el Oximetro 2 no espero por el para transmitir						
-							   CH1_Ready = true;
-						}
-						if(ADC_ACTIVE != 1){ //Si no esta activo el ADC no espero por el para transmitir						
-							   ADC_Ready = true;
-						}
-						
+
+            if(OXIMETER_1_ACTIVE != 1){ //Si no esta activo el Oximetro 1 no espero por el para transmitir
+                CH0_Ready = true;
+            }
+            if(OXIMETER_2_ACTIVE != 1){ //Si no esta activo el Oximetro 2 no espero por el para transmitir
+                CH1_Ready = true;
+            }
+            if(ADC_ACTIVE != 1){ //Si no esta activo el ADC no espero por el para transmitir
+                ADC_Ready = true;
+            }
+
             if(CH0_Ready && CH1_Ready && ADC_Ready){
                 CH0_Ready = false;
                 CH1_Ready = false;
                 ADC_Ready = true;
-							
+
                 if(buffer_transmit == BUFFER_TRANSMIT_0){
 
                     //Copio lo guardado en los buffer de almacen hacia el buffer de transmision 0--------------------------------------------
@@ -487,7 +778,7 @@ void Main_Thread::userLoop()
                         pos_func_buffer_1=0;
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
-                    
+
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
 
                     for(i=0; i<4 ;++i){
@@ -498,11 +789,13 @@ void Main_Thread::userLoop()
                     std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
                     if(start_transmit_ftdi){
-											
-											  std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);											  
+
                         HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
-											  save_to_file_pacient_signals(250);
-											  
+                        if(saving_to_sd){
+                            std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);
+                            save_to_file_pacient_signals(250);
+                        }
+
                     }
 
                     buffer_transmit = BUFFER_TRANSMIT_1;
@@ -538,7 +831,7 @@ void Main_Thread::userLoop()
                         pos_func_buffer_1=0;
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
-                    
+
                     //transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_1, UART_SEND_BUFFER_SIZE);
 
@@ -550,32 +843,27 @@ void Main_Thread::userLoop()
                     std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
                     if(start_transmit_ftdi){
-											
-											  std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);	
+
                         HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
-											  save_to_file_pacient_signals(250);
+                        if(saving_to_sd){
+                            std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);
+                            save_to_file_pacient_signals(250);
+                        }
                     }
 
                     buffer_transmit = BUFFER_TRANSMIT_0;
                 }
             }
         }
-        if((receivedSignal & Timer_timer_ADCPeriodic_Complete) == Timer_timer_ADCPeriodic_Complete){
 
-            HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_13);
-        }
-        if((receivedSignal & SAVE_TO_SD) == SAVE_TO_SD){
+        if((receivedSignal & STOP_SAVING_TO_SD) == STOP_SAVING_TO_SD){
 
-            if(saving_to_sd){
+            save_pacient_data_to_database();
 
-                //save_to_file();		
-            }
-						saving_to_sd = true;
+            save_pacient_signals_to_database();
         }
     }
-
 }
-
 
 /*Threads Functions Implementation Generated Code*/
 void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
@@ -588,6 +876,8 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
     bool stop_save_to_sd = true;
     bool retransmit = true;
     std::uint8_t read_buff[UART_READ_BUFFER_SIZE], i;
+    std::uint8_t transmit_buffer[UART_SEND_BUFFER_SIZE];
+    std::uint8_t write_buffer[UART_SEND_TOTAL_SIZE];
 
     while(true){
         eventWaitAny(signal, osWaitForever);
@@ -599,7 +889,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
             init = true;
             init_prog = true;
             init_save_to_sd = true;
-					  stop_save_to_sd = true;
+            stop_save_to_sd = true;
 
             ////////////Bluetooth or PC/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //--------------------------------------------------------------------
@@ -610,22 +900,46 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
             }
             if(stop_save_to_sd){
                 saving_to_sd = false;
-            }
-            //--------------------------------------------------------------------
-            if(saving_to_sd){
-                std::memcpy(save_to_SD_buffer_0, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
-                Main_Thread::instance().eventSet(SAVE_TO_SD);
+                start_transmit_ftdi = false;
+
+                uint32_t crcValue;
+                uint8_t buf_8b[4];
+
+                Main_Thread::instance().eventSet(STOP_SAVING_TO_SD);
+
+                for(i = DATA_INIT_BUFFER_POS; i < DATA_GRAPH_HR_INIT_BUFFER_POS; i++){
+
+                    transmit_buffer[i] = ACKNOWLEDGE_END_OF_RECORDING;
+
+                }
+                crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer, UART_SEND_BUFFER_SIZE);
+
+                for(i=0; i<4 ;++i){
+                    buf_8b[i] = ((uint8_t*)&crcValue)[3-i];
+                }
+
+                std::memcpy( write_buffer, transmit_buffer, sizeof(transmit_buffer));
+                std::memcpy( write_buffer + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
+
+                HAL_UART_Transmit_DMA(&huart6, write_buffer, UART_SEND_TOTAL_SIZE);
+
                 continue;
             }
-            //--------------------------------------------------------------------
-            for(i=0; i<4; i++){
-                if(read_buff[i] != INIT_SAVE_TO_SD){
-                    init_save_to_sd = false;
-                }
-            }
-            if(init_save_to_sd){              
-                Main_Thread::instance().eventSet(SAVE_TO_SD);
-            }
+            //            //--------------------------------------------------------------------
+            //            if(saving_to_sd){
+            //                std::memcpy(save_to_SD_buffer_0, CH3_read_buffer_0, sizeof(CH3_read_buffer_0));
+            //                Main_Thread::instance().eventSet(SAVE_TO_SD);
+            //                continue;
+            //            }
+            //            //--------------------------------------------------------------------
+            //            for(i=0; i<4; i++){
+            //                if(read_buff[i] != INIT_SAVE_TO_SD){
+            //                    init_save_to_sd = false;
+            //                }
+            //            }
+            //            if(init_save_to_sd){
+            //                Main_Thread::instance().eventSet(SAVE_TO_SD);
+            //            }
             //--------------------------------------------------------------------
             for(i=0; i<4; i++){
                 if(read_buff[i] != INIT_PROG_ID){
@@ -633,6 +947,27 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 }
             }
             if(init_prog){
+
+                uint32_t crcValue;
+                uint8_t buf_8b[4];
+
+                for(i = DATA_INIT_BUFFER_POS; i < DATA_GRAPH_HR_INIT_BUFFER_POS; i++){
+
+                    transmit_buffer_0[i] = CHECKING_CONNECTION;
+
+                }
+                crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
+
+                for(i=0; i<4 ;++i){
+                    buf_8b[i] = ((uint8_t*)&crcValue)[3-i];
+                }
+
+                std::memcpy( write_buff, transmit_buffer_0, sizeof(transmit_buffer_0));
+                std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
+
+                HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
+
+                HAL_Delay(200);
                 NVIC_SystemReset();
             }
             //--------------------------------------------------------------------
@@ -642,11 +977,12 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                 }
             }
             if(init){
-							
-							  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
-							  std::memcpy(save_to_SD_buffer_0, &read_buff[5], read_buff[4]);
-							  size_of_save_to_SD_buffer_0 = read_buff[4];
-							  Main_Thread::save_to_file_pacient_data();
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+                std::memcpy(save_to_SD_buffer_0, &read_buff[5], read_buff[4]);
+                size_of_save_to_SD_buffer_0 = read_buff[4];
+                saving_to_sd = true;
+                Main_Thread::save_to_file_pacient_data();
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
                 Main_Thread::instance().timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
                 continue;
@@ -704,8 +1040,8 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
             for(i=0; i<ADC_BUFFER_SIZE ;++i){  //Elimino el signo y lo subo a 16bits
                 temp_buff_16[i] = temp_buff_16[i]<<1;
             }
-						
-						
+
+
             for(i=0; i<ADC_BUFFER_SIZE ;++i){  //Lo bajo a resolucion de 12bits
                 temp_buff_16[i] = temp_buff_16[i]>>4;
             }
@@ -716,7 +1052,7 @@ void Main_Thread::thread_Read_ADCRun(eObject::eThread &thread)
                 ADC_Init_Ready = true;
                 ADC_buffer_storage_pos = 0;
             }
-						
+
             if(Main_Thread::instance().ADC_Init_Ready){
 
                 Main_Thread::instance().ADC_Ready = true;
@@ -1182,11 +1518,6 @@ void Main_Thread::thread_Process_CH0Run(eObject::eThread &thread) //USART2
             }
         }
     }
-}
-
-
-void Main_Thread::thread_transmitRun(eObject::eThread &thread)
-{
 }
 
 

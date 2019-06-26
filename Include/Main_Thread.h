@@ -59,6 +59,8 @@
 #define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS + ADC_BUFFER_SIZE*2 //212 //por 2 porque adc buffer es de 16bits
 #define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //237
 
+#define CHECKING_CONNECTION  0x0AC ////Chequeando conexion solo para android
+#define ACKNOWLEDGE_END_OF_RECORDING  0x0AF ////acknowledge de fin de grabacion y salvar en BD
 #define INIT_PROG_ID 0x0AA   ////Inicio de Programa
 #define INIT_SEND_ID 0x0FE  ////Inicio de Envio de informacion
 #define INIT_SAVE_TO_SD 0x0FD  ////Inicio de salva de informacion en SD
@@ -129,6 +131,8 @@ public:
 
     static const std::uint16_t SAVE_TO_SD = eObject::eThread::EventFlag10;
 
+    static const std::uint16_t STOP_SAVING_TO_SD = eObject::eThread::EventFlag11;
+
 
     static void timer_ADC_timeout(void const *argument);    /*End of Timer public definitions*/
     
@@ -149,7 +153,7 @@ public:
     static bool CH1_Ready;
     static bool CH1_init_Ready;
     static bool ADC_Ready;
-		static bool ADC_Init_Ready;
+    static bool ADC_Init_Ready;
     static bool start_transmit_ftdi;
     static bool start_transmit_bluetooth;
     static bool error_sending;
@@ -163,9 +167,9 @@ public:
     static std::uint8_t CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE];
-		
-		static std::uint8_t size_of_save_to_SD_buffer_0;	
-		static std::uint32_t function_value_pos_in_SD;
+
+    static std::uint8_t size_of_save_to_SD_buffer_0;
+    static std::uint32_t function_value_pos_in_SD;
     static std::uint32_t HR_value_pos_in_SD;
 
     static std::uint8_t CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
@@ -206,15 +210,13 @@ public:
 
     eObject::eThread thread_Process_CH0;
 
-    eObject::eThread thread_transmit;
-
     /*End of User declare thread objects*/
 
     void process_9A_buff_CH0(std::uint8_t function_value);
     void process_9A_buff_CH1(std::uint8_t function_value);
 
 private:
-	
+
     static FILE *file;
 
     eVirtualTimer timer_timer_led_green;
@@ -242,12 +244,6 @@ private:
     static void thread_Process_CH1Run(eObject::eThread &thread);
 
     static void thread_Process_CH0Run(eObject::eThread &thread);
-
-    static void thread_transmitRun(eObject::eThread &thread);
-
-    static void process_second_halfRun(eObject::eThread &thread);
-
-    static void process_first_halfRun(eObject::eThread &thread);
     /*End of User declare thread objects functions*/
 
     static BUFFER_StateTypeDef buffer_transmit;
@@ -255,8 +251,11 @@ private:
     uint32_t crc32(const void *buf, size_t size);
 
     static bool save_to_file_pacient_data(void);
-		static bool save_to_file_pacient_signals(const uint16_t size);
-		static bool check_if_SD_is_functional(void);
+    static bool save_to_file_pacient_signals(const uint16_t size);
+    static bool check_if_SD_is_functional(void);
+
+    static bool save_pacient_data_to_database(void);
+    static bool save_pacient_signals_to_database(void);
 
 };
 
