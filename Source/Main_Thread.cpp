@@ -61,10 +61,13 @@ bool Main_Thread::CH1_init_Ready = false;
 bool Main_Thread::ADC_Ready = false;
 bool Main_Thread::ADC_Init_Ready = false;
 bool Main_Thread::start_transmit_ftdi = false;
-bool Main_Thread::start_transmit_bluetooth = false;
+bool Main_Thread::already_saved_data = false;
 bool Main_Thread::error_sending = false;
 bool Main_Thread::saving_to_sd = false;
+bool Main_Thread::primera_vuelta = false;
+
 FILE* Main_Thread::file;
+long Main_Thread::fileSize = 0;
 
 std::uint8_t Main_Thread::write_buff[UART_SEND_TOTAL_SIZE];
 
@@ -73,10 +76,11 @@ std::uint8_t Main_Thread::CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
 
 std::uint8_t Main_Thread::CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
 std::uint8_t Main_Thread::save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
-std::uint8_t Main_Thread::save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE];
+std::uint8_t Main_Thread::save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE + 10];
 std::uint8_t Main_Thread::size_of_save_to_SD_buffer_0 = 0;
 std::uint32_t Main_Thread::function_value_pos_in_SD = 0;
 std::uint32_t Main_Thread::HR_value_pos_in_SD=0;
+std::uint32_t Main_Thread::SPO2_BPM_PI_value_pos_in_SD=0;
 
 std::uint8_t Main_Thread::CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -144,7 +148,7 @@ Main_Thread::Main_Thread():
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
-    for(i=0; i<UART_READ_BUFFER_SIZE ;++i){
+    for(i=0; i < UART_READ_BUFFER_SIZE + 10;++i){
 
         Main_Thread::instance().save_to_SD_buffer_signals[i]=0;
 
@@ -272,7 +276,10 @@ bool Main_Thread::save_to_file_pacient_signals(const uint16_t size){
     uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42 + function_value_pos_in_SD;
     uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
     uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
-
+     
+    uint32_t SPO2_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_BPM_PI_value_pos_in_SD;
+	  uint32_t BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_BPM_PI_value_pos_in_SD*2;
+	
     file = fopen ("M:\\pacient_data_temp.dat","r+");
 
     if (file == NULL) {
@@ -284,18 +291,65 @@ bool Main_Thread::save_to_file_pacient_signals(const uint16_t size){
         // write data to file
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-        fseek(file, function_0_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para
+        fseek(file, function_0_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para function 0
 
         fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
 
-        fseek(file, function_1_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para
+        fseek(file, function_1_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para  function 1
 
         fwrite(&save_to_SD_buffer_signals[ADC_BUFFER_SIZE_IN_8BITS + FUNCTION_BUFFER_SIZE], sizeof (uint8_t), FUNCTION_BUFFER_SIZE , file);
 
-        fseek(file, ADC_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para
+        fseek(file, ADC_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para EKG
 
         fwrite(&save_to_SD_buffer_signals[0], sizeof (uint8_t), ADC_BUFFER_SIZE_IN_8BITS , file);
+			
+			
+			  fseek(file, SPO2_data_offset, SEEK_SET); ///Escribe apartir del los datos del paciente para SPO2 Oxy1
 
+        fwrite(&save_to_SD_buffer_signals[250], sizeof (uint8_t), 1 , file);
+			
+			  fseek(file, SPO2_data_offset + 750, SEEK_SET); ///Escribe apartir del los datos del paciente para SPO2 Oxy2
+
+        fwrite(&save_to_SD_buffer_signals[255], sizeof (uint8_t), 1 , file);
+				
+				
+				fseek(file, BPM_PI_data_offset + 1500, SEEK_SET); ///Escribe apartir del los datos del paciente para BPM_L Oxy1
+
+        fwrite(&save_to_SD_buffer_signals[252], sizeof (uint8_t), 1 , file);
+				
+				fseek(file, BPM_PI_data_offset + 1501, SEEK_SET); ///Escribe apartir del los datos del paciente para BPM_H Oxy1
+
+        fwrite(&save_to_SD_buffer_signals[251], sizeof (uint8_t), 1 , file);
+				
+				
+				fseek(file, BPM_PI_data_offset + 3000, SEEK_SET); ///Escribe apartir del los datos del paciente para BPM_L Oxy2
+
+        fwrite(&save_to_SD_buffer_signals[257], sizeof (uint8_t), 1 , file);
+				
+				fseek(file, BPM_PI_data_offset + 3001, SEEK_SET); ///Escribe apartir del los datos del paciente para BPM_H Oxy2
+
+        fwrite(&save_to_SD_buffer_signals[256], sizeof (uint8_t), 1 , file);
+				
+			
+				fseek(file, BPM_PI_data_offset + 4500, SEEK_SET); ///Escribe apartir del los datos del paciente para PI_L Oxy1
+
+        fwrite(&save_to_SD_buffer_signals[254], sizeof (uint8_t), 1 , file);
+				
+				fseek(file, BPM_PI_data_offset + 4501, SEEK_SET); ///Escribe apartir del los datos del paciente para PI_H Oxy1
+
+        fwrite(&save_to_SD_buffer_signals[253], sizeof (uint8_t), 1 , file);
+				
+				
+				fseek(file, BPM_PI_data_offset + 6000, SEEK_SET); ///Escribe apartir del los datos del paciente para PI_L Oxy2
+
+        fwrite(&save_to_SD_buffer_signals[259], sizeof (uint8_t), 1 , file);
+				
+				fseek(file, BPM_PI_data_offset + 6001, SEEK_SET); ///Escribe apartir del los datos del paciente para PI_H Oxy2
+
+        fwrite(&save_to_SD_buffer_signals[258], sizeof (uint8_t), 1 , file);
+
+
+        SPO2_BPM_PI_value_pos_in_SD++;
         function_value_pos_in_SD += FUNCTION_BUFFER_SIZE;
         HR_value_pos_in_SD += ADC_BUFFER_SIZE_IN_8BITS;
 
@@ -303,6 +357,7 @@ bool Main_Thread::save_to_file_pacient_signals(const uint16_t size){
 
             function_value_pos_in_SD = 0;
             HR_value_pos_in_SD = 0;
+					  SPO2_BPM_PI_value_pos_in_SD=0;
         }
 
         fclose (file);
@@ -397,9 +452,46 @@ bool Main_Thread::save_to_file_pacient_data(void){
     //funinit ("M:");
 }
 
+bool Main_Thread::change_places(uint32_t pos, uint32_t last_pos, uint32_t max_lenght){
+
+    uint8_t buff[25];
+    uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42;
+
+    uint32_t pos_0 = function_0_data_offset + pos;
+    uint32_t pos_f = function_0_data_offset + pos + last_pos + FUNCTION_BUFFER_SIZE;
+
+    if(pos_f >= max_lenght){
+
+        pos_f -= max_lenght;
+    }
+
+    if(pos_f == last_pos){
+
+        //buff[pos_0]= save_buffx;
+        fseek(file, pos_0, SEEK_SET);
+        fwrite(save_to_SD_buffer_0, sizeof(uint8_t), FUNCTION_BUFFER_SIZE, file);
+
+        return true;
+    }
+
+    //buff[pos_0] = buff[pos_f];
+
+    fseek(file, pos_f, SEEK_SET);
+    fread(buff, sizeof(uint8_t), FUNCTION_BUFFER_SIZE, file);
+
+    fseek(file, pos_0, SEEK_SET);
+    fwrite(buff, sizeof(uint8_t), FUNCTION_BUFFER_SIZE, file);
+
+    change_places(pos_f, last_pos, max_lenght);
+}
 
 bool Main_Thread::save_pacient_data_to_database(void){
 
+	  std::uint8_t prom_values[10];
+	
+	  memcpy(prom_values, &save_to_SD_buffer_0[SPO2_BUFFER_OXY1_POS + DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS], 10);
+	
+	
     file = fopen ("M:\\pacient_data_temp.dat","r");
     if (file == NULL) {
         // error handling
@@ -407,32 +499,24 @@ bool Main_Thread::save_pacient_data_to_database(void){
 
     }
     else {                                           //SPO2  BPM    PI        function size      ADC data Size
-        uint32_t i = 0, sizes[8], sizes_reverse[8];/* = {DATA_FUNCTION_SIZE, DATA_ADC_BUFFER_SIZE,
-                                                      SPO2_FUNCTION_BUFFER_SIZE, SPO2_FUNCTION_BUFFER_SIZE,
-                                                      BPM_FUNCTION_BUFFER_SIZE, BPM_FUNCTION_BUFFER_SIZE,
-                                                      PI_FUNCTION_BUFFER_SIZE, PI_FUNCTION_BUFFER_SIZE};*/
-        uint8_t prom_values[10];
+        uint32_t i = 0, sizes[8], sizes_reverse[8];
+        uint8_t prom_values_trash[10];
 
-        /*for(i=0; i < 8; i++){  ////espacio para buffers
-
-            sizes[i] = (sizes_reverse[i]<<24 & 0x0FF000000);
-            sizes[i] |= (sizes_reverse[i]<<8 & 0x0FF0000);
-            sizes[i] |= (sizes_reverse[i]>>8 & 0x0FF00);
-            sizes[i] |= (sizes_reverse[i]>>24 & 0x0FF);
-        }*/
 
         // read data from file
         HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
         fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
 
-        fread(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+        fread(prom_values_trash, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
 
         fread(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
 
+			  fseek(file, 0 , SEEK_END);
+        long fileSize = ftell(file);
+        fseek(file, 0 , SEEK_SET);// needed for next read from beginning of file
+			
         fclose (file);
-
-
 
         file = fopen ("M:\\base_datos_oximetria.dat","a");
 
@@ -449,27 +533,55 @@ bool Main_Thread::save_pacient_data_to_database(void){
             fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
 
             fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
-
+					
             fclose (file);
+					
+					  
         }
     }
 }
 
-bool Main_Thread::save_pacient_signals_to_database(void){
 
-
-    uint32_t function_value_pos_in_SD_old = function_value_pos_in_SD;
-    uint32_t HR_value_pos_in_SD_old = HR_value_pos_in_SD;
+bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 
     uint32_t i = 0;
     uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42 + function_value_pos_in_SD;
     uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
     uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
+	
+	  uint32_t SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_BPM_PI_value_pos_in_SD;
 
-      FILE file_write;
-    for(i = function_value_pos_in_SD_old; i<DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+    FILE *file_write;
 
-        file = fopen ("M:\\pacient_data_temp.dat","r");
+    file_write = fopen ("M:\\base_datos_oximetria.dat","a");
+
+    if (file_write == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+    }
+    else{
+
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    }
+
+    file = fopen ("M:\\pacient_data_temp.dat","r");
+
+    if (file == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+    }
+    else{
+
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    }
+
+    
+    function_0_data_offset = size_of_save_to_SD_buffer_0 + 42;
+
+    for(i = 0; i < DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+
         if (file == NULL) {
             // error handling
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -483,9 +595,6 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
             fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
 
-            fclose (file);
-
-            file = fopen ("M:\\base_datos_oximetria.dat","a");
             if (file == NULL) {
                 // error handling
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -495,9 +604,367 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file_write);
 
-                fclose (file);
+            }
+        }
+    }
+
+    
+		function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE;
+
+    for(i = 0; i < DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, function_1_data_offset, SEEK_SET);
+
+            function_1_data_offset+=FUNCTION_BUFFER_SIZE;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file_write);
+
+            }
+        }
+    }
+
+
+
+    ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2);
+
+    for(i = 0; i < DATA_ADC_BUFFER_SIZE_8BITS; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///ECG
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, ADC_data_offset, SEEK_SET);
+
+            ADC_data_offset+=ADC_BUFFER_SIZE_IN_8BITS;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file_write);
+
+            }
+        }  
+		}
+			
+    
+		
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS;
+
+    for(i = 0; i < SPO2_FUNCTION_BUFFER_SIZE; i++){  //////SPO2 Oxy1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset++;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file_write);
+
+            }
+        }
+    }		
+
+
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_FUNCTION_BUFFER_SIZE;
+
+    for(i = 0; i < SPO2_FUNCTION_BUFFER_SIZE; i++){  ///SPO2 Oxy2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset++;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file_write);
+
+            }
+        }
+    }
+
+	
+		//El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2);
+
+    for(i = 0; i < BPM_FUNCTION_BUFFER_SIZE; i++){  ///BPM1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+
+
+		//El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS;
+		for(i = 0; i < BPM_FUNCTION_BUFFER_SIZE; i++){  ///BPM2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+		
+
+
+
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS*2;
+
+    for(i = 0; i < PI_FUNCTION_BUFFER_SIZE; i++){  ///PI1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+
+
+
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) 
+		                          + (BPM_FUNCTION_BUFFER_SIZE_8BITS*2) + PI_FUNCTION_BUFFER_SIZE_8BITS;
+
+    for(i = 0; i < PI_FUNCTION_BUFFER_SIZE; i++){  ///PI2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+
+
+
+
+		fclose(file);
+		fclose(file_write);
+}
+
+
+bool Main_Thread::save_pacient_signals_to_database(void){
+
+
+    uint32_t function_value_pos_in_SD_old = function_value_pos_in_SD;
+    uint32_t HR_value_pos_in_SD_old = HR_value_pos_in_SD;
+	  uint32_t SPO2_BPM_PI_value_pos_in_SD_old = SPO2_BPM_PI_value_pos_in_SD;
+
+    uint32_t i = 0;
+    uint32_t function_0_data_offset = size_of_save_to_SD_buffer_0 + 42 + function_value_pos_in_SD;
+    uint32_t function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE + function_value_pos_in_SD;
+    uint32_t ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + HR_value_pos_in_SD;  ///Mas 56 por las variables de los tamaños de los buffers y promedios de valores
+	
+	  uint32_t SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_BPM_PI_value_pos_in_SD;
+
+    FILE *file_write;
+
+    file_write = fopen ("M:\\base_datos_oximetria.dat","a");
+
+    if (file_write == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+    }
+    else{
+
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    }
+
+    file = fopen ("M:\\pacient_data_temp.dat","r");
+
+    if (file == NULL) {
+        // error handling
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+    }
+    else{
+
+        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    }
+
+    for(i = function_value_pos_in_SD_old; i<DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+
+        
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, function_0_data_offset, SEEK_SET);
+
+            function_0_data_offset+=FUNCTION_BUFFER_SIZE;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file_write);
+
             }
         }
     }
@@ -506,7 +973,6 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
     for(i = 0; i < function_value_pos_in_SD_old; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
 
-        file = fopen ("M:\\pacient_data_temp.dat","r");
         if (file == NULL) {
             // error handling
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -520,9 +986,6 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
             fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
 
-            fclose (file);
-
-            file = fopen ("M:\\base_datos_oximetria.dat","a");
             if (file == NULL) {
                 // error handling
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -532,18 +995,16 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file_write);
 
-                fclose (file);
             }
         }
     }
 
 
 
-    for(i = function_value_pos_in_SD_old; i<DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+    for(i = function_value_pos_in_SD_old; i<DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 1
 
-        file = fopen ("M:\\pacient_data_temp.dat","r");
         if (file == NULL) {
             // error handling
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -557,9 +1018,6 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
             fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
 
-            fclose (file);
-
-            file = fopen ("M:\\base_datos_oximetria.dat","a");
             if (file == NULL) {
                 // error handling
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -569,18 +1027,15 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
-
-                fclose (file);
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file_write);
             }
         }
     }
 
     function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE;
 
-    for(i = 0; i < function_value_pos_in_SD_old; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+    for(i = 0; i < function_value_pos_in_SD_old; i+=FUNCTION_BUFFER_SIZE){  ///Function 1
 
-        file = fopen ("M:\\pacient_data_temp.dat","r");
         if (file == NULL) {
             // error handling
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -594,9 +1049,7 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
             fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);  ///datos del paciente
 
-            fclose (file);
 
-            file = fopen ("M:\\base_datos_oximetria.dat","a");
             if (file == NULL) {
                 // error handling
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -606,18 +1059,16 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file);
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),FUNCTION_BUFFER_SIZE,file_write);
 
-                fclose (file);
             }
         }
     }
 
 
 
-    for(i = HR_value_pos_in_SD_old; i<DATA_ADC_BUFFER_SIZE; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///Function 0
+    for(i = HR_value_pos_in_SD_old; i<DATA_ADC_BUFFER_SIZE_8BITS; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///ECG
 
-        file = fopen ("M:\\pacient_data_temp.dat","r");
         if (file == NULL) {
             // error handling
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -631,9 +1082,6 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
             fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);  ///datos del paciente
 
-            fclose (file);
-
-            file = fopen ("M:\\base_datos_oximetria.dat","a");
             if (file == NULL) {
                 // error handling
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -643,18 +1091,16 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file_write);
 
-                fclose (file);
             }
         }
     }
 
     ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2);
 
-    for(i = 0; i < HR_value_pos_in_SD_old; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///Function 0
+    for(i = 0; i < HR_value_pos_in_SD_old; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///ECG
 
-        file = fopen ("M:\\pacient_data_temp.dat","r");
         if (file == NULL) {
             // error handling
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -668,9 +1114,7 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
             fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);  ///datos del paciente
 
-            fclose(file);
 
-            file = fopen ("M:\\base_datos_oximetria.dat","a");
             if (file == NULL) {
                 // error handling
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -680,12 +1124,439 @@ bool Main_Thread::save_pacient_signals_to_database(void){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
-                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file);
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),ADC_BUFFER_SIZE_IN_8BITS,file_write);
 
-                fclose (file);
             }
         }
     }
+		
+		
+		
+		
+		
+		
+		
+		for(i = SPO2_BPM_PI_value_pos_in_SD_old; i<SPO2_FUNCTION_BUFFER_SIZE; i++){  ///SPO2 Oxy1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset++;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file);  ///datos del paciente
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file_write);
+
+            }
+        }
+    }
+
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS;
+
+    for(i = 0; i < SPO2_BPM_PI_value_pos_in_SD_old; i++){  //////SPO2 Oxy1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset++;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file_write);
+
+            }
+        }
+    }
+		
+		
+		
+		//El offset en la parte final de la grabacion y la pongo al principio (es la grabacion mas vieja) 
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_FUNCTION_BUFFER_SIZE + SPO2_BPM_PI_value_pos_in_SD_old;
+		
+		for(i = SPO2_BPM_PI_value_pos_in_SD_old; i<SPO2_FUNCTION_BUFFER_SIZE; i++){  ///SPO2 Oxy2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset++;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file);  ///datos del paciente
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file_write);
+
+            }
+        }
+    }
+    //El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_FUNCTION_BUFFER_SIZE;
+
+    for(i = 0; i < SPO2_BPM_PI_value_pos_in_SD_old; i++){  ///SPO2 Oxy2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset++;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),1,file_write);
+
+            }
+        }
+    }
+		
+		
+		
+		
+		
+		
+		//El offset en la parte final de la grabacion y la pongo al principio (es la grabacion mas vieja) 
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + SPO2_BPM_PI_value_pos_in_SD_old*2;
+		
+		for(i = SPO2_BPM_PI_value_pos_in_SD_old; i<BPM_FUNCTION_BUFFER_SIZE; i++){  ///BPM1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+    //El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2);
+
+    for(i = 0; i < SPO2_BPM_PI_value_pos_in_SD_old; i++){  ///BPM1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+		
+		
+		
+		//El offset en la parte final de la grabacion y la pongo al principio (es la grabacion mas vieja) 
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS + SPO2_BPM_PI_value_pos_in_SD_old*2;
+		
+		for(i = SPO2_BPM_PI_value_pos_in_SD_old; i<BPM_FUNCTION_BUFFER_SIZE; i++){  ///BPM2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+    //El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS;
+
+    for(i = 0; i < SPO2_BPM_PI_value_pos_in_SD_old; i++){  ///BPM2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+		
+		
+		
+		
+			
+
+
+		//El offset en la parte final de la grabacion y la pongo al principio (es la grabacion mas vieja) 
+		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2)
+                           		+ BPM_FUNCTION_BUFFER_SIZE_8BITS*2 + SPO2_BPM_PI_value_pos_in_SD_old*2;
+		
+		for(i = SPO2_BPM_PI_value_pos_in_SD_old; i<PI_FUNCTION_BUFFER_SIZE; i++){  ///PI1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+    
+		//El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS*2;
+
+    for(i = 0; i < SPO2_BPM_PI_value_pos_in_SD_old; i++){  ///PI1
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+		
+		
+		
+		
+		
+		
+		//El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) 
+		                          + (BPM_FUNCTION_BUFFER_SIZE_8BITS*2) + PI_FUNCTION_BUFFER_SIZE_8BITS + SPO2_BPM_PI_value_pos_in_SD_old*2;
+
+		for(i = SPO2_BPM_PI_value_pos_in_SD_old; i<PI_FUNCTION_BUFFER_SIZE; i++){  ///PI2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+    //El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
+    SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) 
+		                          + (BPM_FUNCTION_BUFFER_SIZE_8BITS*2) + PI_FUNCTION_BUFFER_SIZE_8BITS;
+
+    for(i = 0; i < SPO2_BPM_PI_value_pos_in_SD_old; i++){  ///PI2
+
+        if (file == NULL) {
+            // error handling
+            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+        }
+        else{
+
+            fseek(file, SPO2_BPM_PI_data_offset, SEEK_SET);
+
+            SPO2_BPM_PI_data_offset+=2;
+
+            fread(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file);  ///datos del paciente
+
+
+            if (file == NULL) {
+                // error handling
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+
+            }
+            else{
+
+                HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+
+                fwrite(&save_to_SD_buffer_0[0],sizeof (uint16_t),1,file_write);
+
+            }
+        }
+    }
+		
+
+		
+		fclose(file);
+		fclose(file_write);
 }
 
 //Funcion que calcula valor CRC-32---------------------------------------------------------------------------------------------------------
@@ -726,7 +1597,6 @@ void Main_Thread::userLoop()
         if((receivedSignal & INIT_PROGRAM) == INIT_PROGRAM){
             //		#endif
             start_transmit_ftdi = true;
-            start_transmit_bluetooth = true;
         }
 
         if((receivedSignal & INIT_TRANSMIT) == INIT_TRANSMIT){
@@ -793,6 +1663,7 @@ void Main_Thread::userLoop()
                         HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
                         if(saving_to_sd){
                             std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);
+													  std::memcpy(&save_to_SD_buffer_signals[250], (&write_buff[SPO2_BUFFER_OXY1_POS]), 10);
                             save_to_file_pacient_signals(250);
                         }
 
@@ -847,6 +1718,7 @@ void Main_Thread::userLoop()
                         HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
                         if(saving_to_sd){
                             std::memcpy(save_to_SD_buffer_signals, (&write_buff[DATA_GRAPH_HR_INIT_BUFFER_POS]), 250);
+													  std::memcpy(&save_to_SD_buffer_signals[250], (&write_buff[SPO2_BUFFER_OXY1_POS]), 10);
                             save_to_file_pacient_signals(250);
                         }
                     }
@@ -858,9 +1730,36 @@ void Main_Thread::userLoop()
 
         if((receivedSignal & STOP_SAVING_TO_SD) == STOP_SAVING_TO_SD){
 
+					  std::uint8_t transmit_buffer[UART_SEND_BUFFER_SIZE];
+            std::uint8_t write_buffer[UART_SEND_TOTAL_SIZE];
+					
             save_pacient_data_to_database();
 
-            save_pacient_signals_to_database();
+					  if(primera_vuelta){
+						    
+							  save_pacient_signals_to_database_primera_vuelta();
+						}
+						else{
+                
+							  save_pacient_signals_to_database();
+						}
+						
+						
+					  for(i = DATA_INIT_BUFFER_POS; i < DATA_GRAPH_HR_INIT_BUFFER_POS; i++){
+
+                transmit_buffer[i] = ACKNOWLEDGE_END_OF_RECORDING;
+
+            }
+            crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer, UART_SEND_BUFFER_SIZE);
+
+            for(i=0; i<4 ;++i){
+                    buf_8b[i] = ((uint8_t*)&crcValue)[3-i];
+            }
+
+            std::memcpy( write_buffer, transmit_buffer, sizeof(transmit_buffer));
+            std::memcpy( write_buffer + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
+
+            HAL_UART_Transmit_DMA(&huart6, write_buffer, UART_SEND_TOTAL_SIZE);
         }
     }
 }
@@ -876,8 +1775,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
     bool stop_save_to_sd = true;
     bool retransmit = true;
     std::uint8_t read_buff[UART_READ_BUFFER_SIZE], i;
-    std::uint8_t transmit_buffer[UART_SEND_BUFFER_SIZE];
-    std::uint8_t write_buffer[UART_SEND_TOTAL_SIZE];
+
 
     while(true){
         eventWaitAny(signal, osWaitForever);
@@ -898,30 +1796,24 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
                     stop_save_to_sd = false;
                 }
             }
-            if(stop_save_to_sd){
+            if(stop_save_to_sd && !already_saved_data){
+							
                 saving_to_sd = false;
                 start_transmit_ftdi = false;
-
-                uint32_t crcValue;
-                uint8_t buf_8b[4];
-
+							  already_saved_data = true;
+                
+							  if(read_buff[DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS - 1] == 0xFF){
+									
+							      primera_vuelta = false;
+								}
+								else{
+									
+									  primera_vuelta = true;
+								}
+							  
+								std::memcpy(save_to_SD_buffer_0, &read_buff[0], 30);
+							
                 Main_Thread::instance().eventSet(STOP_SAVING_TO_SD);
-
-                for(i = DATA_INIT_BUFFER_POS; i < DATA_GRAPH_HR_INIT_BUFFER_POS; i++){
-
-                    transmit_buffer[i] = ACKNOWLEDGE_END_OF_RECORDING;
-
-                }
-                crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer, UART_SEND_BUFFER_SIZE);
-
-                for(i=0; i<4 ;++i){
-                    buf_8b[i] = ((uint8_t*)&crcValue)[3-i];
-                }
-
-                std::memcpy( write_buffer, transmit_buffer, sizeof(transmit_buffer));
-                std::memcpy( write_buffer + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
-
-                HAL_UART_Transmit_DMA(&huart6, write_buffer, UART_SEND_TOTAL_SIZE);
 
                 continue;
             }

@@ -150,9 +150,41 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
+          <LineNumber>1762</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134253102</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\1762</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>516</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134248316</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\516</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
           <LineNumber>62</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134236908</Address>
+          <Address>134236940</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -162,38 +194,6 @@
           <Filename>RTE\eObject_Framework\UserCallBacks.cpp</Filename>
           <ExecCommand></ExecCommand>
           <Expression>\\ADC_DMA_MULTI_Heart\RTE/eObject_Framework/UserCallBacks.cpp\62</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>403</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134247832</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\Source\Main_Thread.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\403</Expression>
-        </Bp>
-        <Bp>
-          <Number>2</Number>
-          <Type>0</Type>
-          <LineNumber>657</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134248826</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\Source\Main_Thread.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\657</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -266,6 +266,21 @@
           <count>13</count>
           <WinNumber>1</WinNumber>
           <ItemText>sizes</ItemText>
+        </Ww>
+        <Ww>
+          <count>14</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>write_buffer</ItemText>
+        </Ww>
+        <Ww>
+          <count>15</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>prom_values,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>16</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>fileSize,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <ScvdPack>

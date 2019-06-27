@@ -55,6 +55,8 @@
 #define BPM_BUFFER_OXY2_POS SPO2_BUFFER_OXY2_POS+1 //8
 #define PI_BUFFER_OXY2_POS SPO2_BUFFER_OXY2_POS+3 //10
 
+#define DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS 5
+
 #define DATA_GRAPH_HR_INIT_BUFFER_POS DATA_INIT_BUFFER_POS+10 //12
 #define DATA_GRAPH_FT_INIT_BUFFER_POS DATA_GRAPH_HR_INIT_BUFFER_POS + ADC_BUFFER_SIZE*2 //212 //por 2 porque adc buffer es de 16bits
 #define DATA_GRAPH_FT_2_INIT_BUFFER_POS DATA_GRAPH_FT_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //237
@@ -84,10 +86,13 @@
 #define MAX_TIME_RECORDING 300////en segundos (solo valores pares)
 #define DATA_FUNCTION_SIZE  (int)(FUNCTION_BUFFER_SIZE*MAX_TIME_RECORDING*2.5)  ////FUNCTION_BUFFER_SIZE * 150
 #define DATA_ADC_BUFFER_SIZE  (int)(ADC_BUFFER_SIZE*MAX_TIME_RECORDING*2.5)  ////
+#define DATA_ADC_BUFFER_SIZE_8BITS  DATA_ADC_BUFFER_SIZE*2 
 #define SPO2_TIME_RECORDING MAX_TIME_RECORDING //en segundos
 #define SPO2_FUNCTION_BUFFER_SIZE int(SPO2_TIME_RECORDING*2.5)
-#define BPM_FUNCTION_BUFFER_SIZE SPO2_FUNCTION_BUFFER_SIZE
-#define PI_FUNCTION_BUFFER_SIZE SPO2_FUNCTION_BUFFER_SIZE
+#define BPM_FUNCTION_BUFFER_SIZE SPO2_FUNCTION_BUFFER_SIZE //EN 16BITS
+#define BPM_FUNCTION_BUFFER_SIZE_8BITS BPM_FUNCTION_BUFFER_SIZE*2 //EN 8BITS
+#define PI_FUNCTION_BUFFER_SIZE SPO2_FUNCTION_BUFFER_SIZE  //EN 16BITS
+#define PI_FUNCTION_BUFFER_SIZE_8BITS PI_FUNCTION_BUFFER_SIZE*2 //EN 8BITS
 
 #define TOTAL_SIGNALS_SIZE DATA_FUNCTION_SIZE*2+DATA_ADC_BUFFER_SIZE*2+SPO2_FUNCTION_BUFFER_SIZE*2+BPM_FUNCTION_BUFFER_SIZE*4+PI_FUNCTION_BUFFER_SIZE*4
 
@@ -155,9 +160,10 @@ public:
     static bool ADC_Ready;
     static bool ADC_Init_Ready;
     static bool start_transmit_ftdi;
-    static bool start_transmit_bluetooth;
+    static bool already_saved_data;
     static bool error_sending;
     static bool saving_to_sd;
+		static bool primera_vuelta;
 
     static std::uint8_t write_buff[UART_SEND_TOTAL_SIZE];
 
@@ -166,11 +172,12 @@ public:
 
     static std::uint8_t CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
-    static std::uint8_t save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE];
+    static std::uint8_t save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE  + 10];
 
     static std::uint8_t size_of_save_to_SD_buffer_0;
     static std::uint32_t function_value_pos_in_SD;
     static std::uint32_t HR_value_pos_in_SD;
+		static std::uint32_t SPO2_BPM_PI_value_pos_in_SD;
 
     static std::uint8_t CH0_function_buffer_0[FUNCTION_BUFFER_SIZE];
     static std::uint8_t CH0_function_buffer_storage_0[FUNCTION_BUFFER_STORAGE_SIZE];
@@ -218,6 +225,7 @@ public:
 private:
 
     static FILE *file;
+    static long fileSize;
 
     eVirtualTimer timer_timer_led_green;
 
@@ -256,6 +264,8 @@ private:
 
     static bool save_pacient_data_to_database(void);
     static bool save_pacient_signals_to_database(void);
+		static bool save_pacient_signals_to_database_primera_vuelta(void);
+		static bool change_places(uint32_t pos, uint32_t last_pos, uint32_t max_lenght);
 
 };
 
