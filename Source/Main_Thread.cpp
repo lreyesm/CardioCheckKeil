@@ -487,9 +487,9 @@ bool Main_Thread::change_places(uint32_t pos, uint32_t last_pos, uint32_t max_le
 
 bool Main_Thread::save_pacient_data_to_database(void){
 
-	  std::uint8_t prom_values[10];
+	  std::uint8_t prom_values[60];
 	
-	  memcpy(prom_values, &save_to_SD_buffer_0[SPO2_BUFFER_OXY1_POS + DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS], 10);
+	  memcpy(prom_values, &save_to_SD_buffer_0[DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS], 60);
 	
 	
     file = fopen ("M:\\pacient_data_temp.dat","r");
@@ -512,9 +512,9 @@ bool Main_Thread::save_pacient_data_to_database(void){
 
         fread(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
 
-			  fseek(file, 0 , SEEK_END);
-        long fileSize = ftell(file);
-        fseek(file, 0 , SEEK_SET);// needed for next read from beginning of file
+//			  fseek(file, 0 , SEEK_END);
+//        long fileSize = ftell(file);
+//        fseek(file, 0 , SEEK_SET);// needed for next read from beginning of file
 			
         fclose (file);
 
@@ -530,8 +530,8 @@ bool Main_Thread::save_pacient_data_to_database(void){
 
             fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);
 
-            fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
-
+            fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores y espacio para tamaño de buffers 14 * 4
+            ///Mas adelante cambiar estos tamaños por los recibidos de la PC o Android device
             fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
 					
             fclose (file);
@@ -1733,6 +1733,8 @@ void Main_Thread::userLoop()
 					  std::uint8_t transmit_buffer[UART_SEND_BUFFER_SIZE];
             std::uint8_t write_buffer[UART_SEND_TOTAL_SIZE];
 					
+					  HAL_UART_DMAStop(&huart6);
+					
             save_pacient_data_to_database();
 
 					  if(primera_vuelta){
@@ -1760,6 +1762,9 @@ void Main_Thread::userLoop()
             std::memcpy( write_buffer + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
 
             HAL_UART_Transmit_DMA(&huart6, write_buffer, UART_SEND_TOTAL_SIZE);
+						
+						HAL_Delay(500);
+						NVIC_SystemReset();
         }
     }
 }
@@ -1800,6 +1805,9 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
 							
                 saving_to_sd = false;
                 start_transmit_ftdi = false;
+							
+							  HAL_UART_DMAStop(&huart6);
+							
 							  already_saved_data = true;
                 
 							  if(read_buff[DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS - 1] == 0xFF){
@@ -1811,7 +1819,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
 									  primera_vuelta = true;
 								}
 							  
-								std::memcpy(save_to_SD_buffer_0, &read_buff[0], 30);
+								std::memcpy(save_to_SD_buffer_0, &read_buff[0], 60);
 							
                 Main_Thread::instance().eventSet(STOP_SAVING_TO_SD);
 
