@@ -164,6 +164,11 @@ public:
     static bool error_sending;
     static bool saving_to_sd;
 		static bool primera_vuelta;
+		static bool amarillo_desconectado;
+		static bool rojo_desconectado;
+		static bool verde_desconectado;
+		static bool AD8232_encendido;
+		static bool AD8232_orden_encender;
 
     static std::uint8_t write_buff[UART_SEND_TOTAL_SIZE];
 
@@ -237,7 +242,7 @@ private:
 
     eVirtualTimer timer_timer_leds;
 
-    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 10000;  ///Led azul
+    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 20000;  ///Led azul
 
     eVirtualTimer timer_timer_ADC;
 
@@ -266,6 +271,11 @@ private:
     static bool save_pacient_signals_to_database(void);
 		static bool save_pacient_signals_to_database_primera_vuelta(void);
 		static bool change_places(uint32_t pos, uint32_t last_pos, uint32_t max_lenght);
+		
+		static void set_pin_as_analog(GPIO_TypeDef *GPIOx, uint16_t PINx);
+		static bool electrodo_amarillo_desconectado(void);
+		static bool electrodo_rojo_desconectado(void);
+		static bool electrodo_verde_desconectado(void);
 
 };
 

@@ -65,6 +65,11 @@ bool Main_Thread::already_saved_data = false;
 bool Main_Thread::error_sending = false;
 bool Main_Thread::saving_to_sd = false;
 bool Main_Thread::primera_vuelta = false;
+		 bool Main_Thread::amarillo_desconectado= false;
+		 bool Main_Thread::rojo_desconectado= false;
+		 bool Main_Thread::verde_desconectado= false;
+		 bool Main_Thread::AD8232_encendido= true;
+     bool Main_Thread::AD8232_orden_encender = false;
 
 FILE* Main_Thread::file;
 long Main_Thread::fileSize = 0;
@@ -133,6 +138,17 @@ const float32_t fir_coefficient_500Hz[NUM_TAPS]={
 static float32_t  firState_f32[BLOCK_SIZE + NUM_TAPS - 1];
 static uint32_t blockSize = BLOCK_SIZE;
 
+void Main_Thread::set_pin_as_analog(GPIO_TypeDef * GPIO_port, uint16_t GPIO_pin){
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+  
+  /*Configure GPIO pin : PC15 */
+  GPIO_InitStruct.Pin = GPIO_pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIO_port, &GPIO_InitStruct);
+}
+
 /*Main Thread Constructor Generated Code*/
 Main_Thread::Main_Thread():
     timer_timer_led_green(timeOut_timer_led_green_function, eVirtualTimer::Periodic),
@@ -145,6 +161,8 @@ Main_Thread::Main_Thread():
     timer_timer_ADC(timer_ADC_timeout, eVirtualTimer::Periodic)
 {
 
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET); ///enciendo el AD8232
+	
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
@@ -182,10 +200,14 @@ Main_Thread::Main_Thread():
     HAL_UART_Receive_DMA(&huart3, &CH1_read_buffer_0[0], UART_READ_BUFFER_SIZE);
     //		#endif
 
+		//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_RESET); ///Pongo a uno la Output del AD8232
+				
     HAL_ADC_Start_DMA(&hadc1, &adc_value, 1);
     thread_Read_ADC.start();
     HAL_TIM_Base_Start_IT(&htim2);
     //timer_timer_ADC.start(TIMER_timer_ADC_PERIOD_MS);
+		
+		
 }
 /*End of Main Thread Constructor Generated Code*/
 
@@ -508,7 +530,7 @@ bool Main_Thread::save_pacient_data_to_database(void){
 
         fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
 
-        fread(prom_values_trash, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+        fread(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
 
         fread(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
 
@@ -1588,6 +1610,7 @@ void Main_Thread::userLoop()
     std::uint32_t pos_func_buffer_0 =0;
     std::uint32_t pos_func_buffer_1 =0;
 
+	  set_pin_as_analog(GPIOC, GPIO_PIN_15);
     check_if_SD_is_functional();
 
     while(true){
@@ -1649,6 +1672,31 @@ void Main_Thread::userLoop()
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
 
+										if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
+										
+										  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] | 0x080;
+										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] | 0x080;
+										}else{
+											
+											transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] & 0x07F;
+										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] & 0x07F;
+										}
+										if(verde_desconectado){
+																				  
+										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] | 0x080;
+										}else{
+											
+										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] & 0x07F;
+										}
+                    if(rojo_desconectado){
+																													  
+											transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] | 0x080;
+										}else{										
+											transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] & 0x07F;
+
+										}										
+										//-----------------------------------------------------------------------------------------------------------------------------
+										
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
 
                     for(i=0; i<4 ;++i){
@@ -1703,6 +1751,33 @@ void Main_Thread::userLoop()
                     }
                     //-----------------------------------------------------------------------------------------------------------------------
 
+										//-----------------------------------------------------------------------------------------------------------------------
+
+										if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
+										
+										  transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] | 0x080;
+										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] | 0x080;
+										}else{
+											
+											transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] & 0x07F;
+										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] & 0x07F;
+										}
+										if(verde_desconectado){
+																				  
+										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] | 0x080;
+										}else{
+											
+										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] & 0x07F;
+										}
+                    if(rojo_desconectado){
+																													  
+											transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] | 0x080;
+										}else{										
+											transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] & 0x07F;
+
+										}										
+										//-----------------------------------------------------------------------------------------------------------------------------
+										
                     //transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_1, UART_SEND_BUFFER_SIZE);
 
@@ -2440,11 +2515,77 @@ void Main_Thread::timer_ADC_timeout(void const *argument){
     //eventWait(Timer_timer_ADCPeriodic_Complete);
 }
 
+bool Main_Thread::electrodo_amarillo_desconectado(){
+
+		if((HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) && (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_5) == GPIO_PIN_SET)){  //rojo desconectado
+		
+			HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+			return true;
+		}
+		return false;
+}
+
+bool Main_Thread::electrodo_rojo_desconectado(){
+
+		if((HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET)){  //rojo desconectado
+		
+			HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+			return true;
+		}
+		return false;
+}
+
+bool Main_Thread::electrodo_verde_desconectado(){
+
+		if((HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_5) == GPIO_PIN_SET)){  //rojo desconectado
+		
+			HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+			return true;
+		}
+		return false;
+}
+
 void Main_Thread::timeOut_timer_leds_function(void const *argument){  ///Led azul
 
     ////To set Event For This timer timeOut
     //Main_Thread::instance().eventSet(Timer_timer_ledsPeriodic_Complete);
-    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+	
+	  if(AD8232_orden_encender){
+	    
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET); ///Enciendo el AD8232
+			AD8232_orden_encender = false;
+		}
+	  if(electrodo_verde_desconectado()){  //rojo desconectado
+		
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
+			verde_desconectado = true;
+			AD8232_encendido = false;
+		}
+		else if(electrodo_rojo_desconectado()){  //verde desconectado  //si ambos estan en set el Amarillo es el que esta desconectado
+		
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
+			rojo_desconectado = true;
+			AD8232_encendido = false;
+		}
+		else if(electrodo_amarillo_desconectado()){
+			
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
+			amarillo_desconectado = true;
+			AD8232_encendido = false;
+		}
+		else{
+		
+			amarillo_desconectado = false;
+			rojo_desconectado = false;
+			verde_desconectado = false;
+			
+			if(!AD8232_encendido){
+				
+				AD8232_encendido = true;
+				AD8232_orden_encender = true;
+				HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
+		  }
+		}
     ////To start this timer
     //timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
 
@@ -2473,6 +2614,8 @@ void Main_Thread::timeOut_timer_led_green_function(void const *argument){
         Main_Thread::instance().eventSet(INIT_PROGRAM);
         error_sending=false;
     }
+		
+
     ////To start this timer
     //timer_timer_led_green.start(TIMER_timer_led_green_PERIOD_MS);
 

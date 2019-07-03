@@ -150,25 +150,25 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>62</LineNumber>
+          <LineNumber>1790</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134237008</Address>
+          <Address>134253670</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>RTE\eObject_Framework\UserCallBacks.cpp</Filename>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\RTE/eObject_Framework/UserCallBacks.cpp\62</Expression>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\1790</Expression>
         </Bp>
         <Bp>
           <Number>1</Number>
           <Type>0</Type>
-          <LineNumber>1806</LineNumber>
+          <LineNumber>2501</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134247180</Address>
+          <Address>134247832</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -177,14 +177,14 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\Source\Main_Thread.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\1806</Expression>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\2501</Expression>
         </Bp>
         <Bp>
           <Number>2</Number>
           <Type>0</Type>
-          <LineNumber>1764</LineNumber>
+          <LineNumber>164</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134253144</Address>
+          <Address>134253904</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -193,7 +193,55 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\Source\Main_Thread.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\1764</Expression>
+          <Expression>\\ADC_DMA_MULTI_Heart\Source/Main_Thread.cpp\164</Expression>
+        </Bp>
+        <Bp>
+          <Number>3</Number>
+          <Type>0</Type>
+          <LineNumber>1842</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+        <Bp>
+          <Number>4</Number>
+          <Type>0</Type>
+          <LineNumber>2553</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+        <Bp>
+          <Number>5</Number>
+          <Type>0</Type>
+          <LineNumber>2588</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>.\Source\Main_Thread.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>

@@ -361,7 +361,7 @@
               <MiscControls />
               <Define>USE_HAL_DRIVER,STM32F407xx</Define>
               <Undefine />
-              <IncludePath>../Inc;    C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/STM32F4xx_HAL_Driver/Inc;    C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;    C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include;    C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Inc;         C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/STM32F4xx_HAL_Driver/Inc;         C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;         C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include;         C:/Users/luis.reyes/STM32Cube/Repository/STM32Cube_FW_F4_V1.23.0/Drivers/CMSIS/Include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
