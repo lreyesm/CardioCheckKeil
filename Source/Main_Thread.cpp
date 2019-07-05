@@ -71,6 +71,10 @@ bool Main_Thread::primera_vuelta = false;
 		 bool Main_Thread::AD8232_encendido= true;
      bool Main_Thread::AD8232_orden_encender = false;
 
+std::uint32_t Main_Thread::ekg_data_size;
+std::uint32_t Main_Thread::oxy_data_size;
+std::uint32_t Main_Thread::SPO2_BPM_PI_data_size;
+
 FILE* Main_Thread::file;
 long Main_Thread::fileSize = 0;
 
@@ -530,7 +534,7 @@ bool Main_Thread::save_pacient_data_to_database(void){
 
         fread(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);  ///datos del paciente
 
-        fread(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
+        fread(prom_values_trash, sizeof (uint8_t), 10, file); ///espacio para promedio de valores
 
         fread(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
 
@@ -547,15 +551,44 @@ bool Main_Thread::save_pacient_data_to_database(void){
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
 
         }
-        else{
+        else{					
+					  oxy_data_size = oxy_data_size | prom_values[10];
+					  oxy_data_size = oxy_data_size << 8;
+					  oxy_data_size = oxy_data_size | prom_values[11];
+					  oxy_data_size = oxy_data_size << 8;
+					  oxy_data_size = oxy_data_size | prom_values[12];
+					  oxy_data_size = oxy_data_size << 8;
+					  oxy_data_size = oxy_data_size | prom_values[13];
+
+					  ekg_data_size = ekg_data_size | prom_values[14];
+					  ekg_data_size = ekg_data_size << 8;
+					  ekg_data_size = ekg_data_size | prom_values[15];
+					  ekg_data_size = ekg_data_size << 8;
+					  ekg_data_size = ekg_data_size | prom_values[16];
+					  ekg_data_size = ekg_data_size << 8;
+					  ekg_data_size = ekg_data_size | prom_values[17];
+					
+						SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size | prom_values[18];
+					  SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size << 8;
+					  SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size | prom_values[19];
+					  SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size << 8;
+					  SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size | prom_values[20];
+					  SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size << 8;
+					  SPO2_BPM_PI_data_size = SPO2_BPM_PI_data_size | prom_values[21];
+					  
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
             fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);
 
-            fwrite(prom_values, sizeof (uint8_t), 10, file); ///espacio para promedio de valores y espacio para tamaño de buffers 14 * 4
+            //Para el caso de tamaños fijos descomentar estas 2 lineas
+            //fwrite(prom_values, sizeof (uint8_t), 10, file); 
+						///espacio para promedio de valores
+             
             ///Mas adelante cambiar estos tamaños por los recibidos de la PC o Android device
-            fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
+            //fwrite(sizes, sizeof (uint32_t), 8, file);  ///espacio para tamaño de buffers 14 * 4
 					
+					  fwrite(prom_values, sizeof (uint8_t), 42, file); ///espacio para promedio de valores y espacio para tamaño de buffers 14 * 4
+           
             fclose (file);
 					
 					  
@@ -602,7 +635,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
     
     function_0_data_offset = size_of_save_to_SD_buffer_0 + 42;
 
-    for(i = 0; i < DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
+    for(i = 0; i < oxy_data_size; i+=FUNCTION_BUFFER_SIZE){  ///Function 0
 
         if (file == NULL) {
             // error handling
@@ -635,7 +668,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
     
 		function_1_data_offset = size_of_save_to_SD_buffer_0 + 42 + DATA_FUNCTION_SIZE;
 
-    for(i = 0; i < DATA_FUNCTION_SIZE; i+=FUNCTION_BUFFER_SIZE){  ///Function 1
+    for(i = 0; i < oxy_data_size; i+=FUNCTION_BUFFER_SIZE){  ///Function 1
 
         if (file == NULL) {
             // error handling
@@ -670,7 +703,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 
     ADC_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2);
 
-    for(i = 0; i < DATA_ADC_BUFFER_SIZE_8BITS; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///ECG
+    for(i = 0; i < ekg_data_size * 2; i+=ADC_BUFFER_SIZE_IN_8BITS){  ///ECG
 
         if (file == NULL) {
             // error handling
@@ -705,7 +738,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 		
 		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS;
 
-    for(i = 0; i < SPO2_FUNCTION_BUFFER_SIZE; i++){  //////SPO2 Oxy1
+    for(i = 0; i < SPO2_BPM_PI_data_size; i++){  //////SPO2 Oxy1
 
         if (file == NULL) {
             // error handling
@@ -739,7 +772,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 
     SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + SPO2_FUNCTION_BUFFER_SIZE;
 
-    for(i = 0; i < SPO2_FUNCTION_BUFFER_SIZE; i++){  ///SPO2 Oxy2
+    for(i = 0; i < SPO2_BPM_PI_data_size; i++){  ///SPO2 Oxy2
 
         if (file == NULL) {
             // error handling
@@ -774,7 +807,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 		//El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
     SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2);
 
-    for(i = 0; i < BPM_FUNCTION_BUFFER_SIZE; i++){  ///BPM1
+    for(i = 0; i < SPO2_BPM_PI_data_size; i++){  ///BPM1
 
         if (file == NULL) {
             // error handling
@@ -808,7 +841,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 
 		//El offset en la parte inicial de la grabacion y la pongo al final (es la grabacion mas nueva)
     SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS;
-		for(i = 0; i < BPM_FUNCTION_BUFFER_SIZE; i++){  ///BPM2
+		for(i = 0; i < SPO2_BPM_PI_data_size; i++){  ///BPM2
 
         if (file == NULL) {
             // error handling
@@ -844,7 +877,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 
 		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) + BPM_FUNCTION_BUFFER_SIZE_8BITS*2;
 
-    for(i = 0; i < PI_FUNCTION_BUFFER_SIZE; i++){  ///PI1
+    for(i = 0; i < SPO2_BPM_PI_data_size; i++){  ///PI1
 
         if (file == NULL) {
             // error handling
@@ -880,7 +913,7 @@ bool Main_Thread::save_pacient_signals_to_database_primera_vuelta(void){
 		SPO2_BPM_PI_data_offset = size_of_save_to_SD_buffer_0 + 42 + (DATA_FUNCTION_SIZE*2) + DATA_ADC_BUFFER_SIZE_8BITS + (SPO2_FUNCTION_BUFFER_SIZE*2) 
 		                          + (BPM_FUNCTION_BUFFER_SIZE_8BITS*2) + PI_FUNCTION_BUFFER_SIZE_8BITS;
 
-    for(i = 0; i < PI_FUNCTION_BUFFER_SIZE; i++){  ///PI2
+    for(i = 0; i < SPO2_BPM_PI_data_size; i++){  ///PI2
 
         if (file == NULL) {
             // error handling
@@ -1613,6 +1646,25 @@ void Main_Thread::userLoop()
 	  set_pin_as_analog(GPIOC, GPIO_PIN_15);
     check_if_SD_is_functional();
 
+
+//    for(i = DATA_INIT_BUFFER_POS; i < DATA_GRAPH_HR_INIT_BUFFER_POS; i++){
+
+//         transmit_buffer_0[i] = CHECKING_CONNECTION;
+
+//    }
+//    crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
+
+//    for(i=0; i<4 ;++i){
+//         buf_8b[i] = ((uint8_t*)&crcValue)[3-i];
+//    }
+
+//    std::memcpy( write_buff, transmit_buffer_0, sizeof(transmit_buffer_0));
+//    std::memcpy( write_buff + UART_SEND_BUFFER_SIZE, buf_8b, sizeof(buf_8b));
+
+//    HAL_UART_Transmit_DMA(&huart6, write_buff, UART_SEND_TOTAL_SIZE);
+								
+		
+		
     while(true){
         eventWaitAny(signal, osWaitForever);
         receivedSignal = static_cast<eThread::ThreadEventFlags>(signal);
@@ -1674,27 +1726,23 @@ void Main_Thread::userLoop()
 
 										if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
 										
-										  transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] | 0x080;
-										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] | 0x080;
-										}else{
-											
-											transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] & 0x07F;
-										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] & 0x07F;
+										  transmit_buffer_0[STATUS_CHECK_ADC_0] = 1;
+										  transmit_buffer_0[STATUS_CHECK_ADC_1] = 1;											
 										}
-										if(verde_desconectado){
-																				  
-										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] | 0x080;
-										}else{
+										else if(verde_desconectado){
 											
-										  transmit_buffer_0[STATUS_CHECK_OXY2_POS] = transmit_buffer_0[STATUS_CHECK_OXY2_POS] & 0x07F;
+										  transmit_buffer_0[STATUS_CHECK_ADC_1] = 1;
 										}
-                    if(rojo_desconectado){
-																													  
-											transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] | 0x080;
-										}else{										
-											transmit_buffer_0[STATUS_CHECK_OXY1_POS] = transmit_buffer_0[STATUS_CHECK_OXY1_POS] & 0x07F;
-
-										}										
+										else if(rojo_desconectado){
+											
+											transmit_buffer_0[STATUS_CHECK_ADC_0] = 1;
+										}
+										else{
+											
+											transmit_buffer_0[STATUS_CHECK_ADC_0] = 0;
+										  transmit_buffer_0[STATUS_CHECK_ADC_1] = 0;
+										}	
+										
 										//-----------------------------------------------------------------------------------------------------------------------------
 										
                     crcValue = Main_Thread::instance().crc32((void*)&transmit_buffer_0, UART_SEND_BUFFER_SIZE);
@@ -1752,30 +1800,25 @@ void Main_Thread::userLoop()
                     //-----------------------------------------------------------------------------------------------------------------------
 
 										//-----------------------------------------------------------------------------------------------------------------------
-
-										if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
+                    if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
 										
-										  transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] | 0x080;
-										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] | 0x080;
-										}else{
-											
-											transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] & 0x07F;
-										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] & 0x07F;
+										  transmit_buffer_1[STATUS_CHECK_ADC_0] = 1;
+										  transmit_buffer_1[STATUS_CHECK_ADC_1] = 1;											
 										}
-										if(verde_desconectado){
-																				  
-										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] | 0x080;
-										}else{
+										else if(verde_desconectado){
 											
-										  transmit_buffer_1[STATUS_CHECK_OXY2_POS] = transmit_buffer_1[STATUS_CHECK_OXY2_POS] & 0x07F;
+										  transmit_buffer_1[STATUS_CHECK_ADC_1] = 1;
 										}
-                    if(rojo_desconectado){
-																													  
-											transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] | 0x080;
-										}else{										
-											transmit_buffer_1[STATUS_CHECK_OXY1_POS] = transmit_buffer_1[STATUS_CHECK_OXY1_POS] & 0x07F;
-
-										}										
+										else if(rojo_desconectado){
+											
+											transmit_buffer_1[STATUS_CHECK_ADC_0] = 1;
+										}
+										else{
+											
+											transmit_buffer_1[STATUS_CHECK_ADC_0] = 0;
+										  transmit_buffer_1[STATUS_CHECK_ADC_1] = 0;
+										}	
+								
 										//-----------------------------------------------------------------------------------------------------------------------------
 										
                     //transmit_buffer_1[DATA_INIT_BUFFER_POS]=DATA_BUFFER_TRANSMIT_1;
@@ -2555,24 +2598,25 @@ void Main_Thread::timeOut_timer_leds_function(void const *argument){  ///Led azu
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET); ///Enciendo el AD8232
 			AD8232_orden_encender = false;
 		}
-	  if(electrodo_verde_desconectado()){  //rojo desconectado
-		
+	  if(electrodo_amarillo_desconectado()){  //amarillo desconectado
+			
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
-			verde_desconectado = true;
+			amarillo_desconectado = true;
 			AD8232_encendido = false;
+
 		}
-		else if(electrodo_rojo_desconectado()){  //verde desconectado  //si ambos estan en set el Amarillo es el que esta desconectado
+		else if(electrodo_rojo_desconectado()){  //rojo desconectado  //si ambos estan en set el Amarillo es el que esta desconectado
 		
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
 			rojo_desconectado = true;
 			AD8232_encendido = false;
 		}
-		else if(electrodo_amarillo_desconectado()){
+		else if(electrodo_verde_desconectado()){
 			
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET); ///apago el AD8232
-			amarillo_desconectado = true;
+			verde_desconectado = true;
 			AD8232_encendido = false;
-		}
+		}			
 		else{
 		
 			amarillo_desconectado = false;

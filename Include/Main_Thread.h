@@ -72,14 +72,16 @@
 //#define HEADER_END_POS 160
 
 //#define CURRENT_OXYMETER_OXY1_POS DATA_INIT_BUFFER_POS+1 //3
-#define STATUS_CHECK_OXY1_POS DATA_GRAPH_FT_2_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //262
-#define STATUS_CHECK_OXY2_POS STATUS_CHECK_OXY1_POS+1 //263
-//#define CURRENT_OXYMETER_OXY2_POS DATA_GRAPH_FT_INIT_BUFFER_POS+(FUNCTION_BUFFER_SIZE*2) //260
-//#define SPO2_BUFFER_OXY2_POS CURRENT_OXYMETER_OXY2_POS //160
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define STATUS_CHECK_ADC_0 DATA_GRAPH_FT_2_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //262 ----------Enviar aqui status de electrodos -------------------
+#define STATUS_CHECK_ADC_1 STATUS_CHECK_ADC_0 + 1 //263
+#define STATUS_CHECK_OXY1_POS STATUS_CHECK_ADC_1 + 1//264
+#define STATUS_CHECK_OXY2_POS STATUS_CHECK_OXY1_POS+1 //265
 
-#define UART_SEND_BUFFER_SIZE STATUS_CHECK_OXY2_POS + 1 //264
-#define UART_SEND_TOTAL_SIZE UART_SEND_BUFFER_SIZE + CHECK_SUM_SIZE //268
+//#define CURRENT_OXYMETER_OXY2_POS DATA_GRAPH_FT_INIT_BUFFER_POS+(FUNCTION_BUFFER_SIZE*2) //260
+//#define SPO2_BUFFER_OXY2_POS CURRENT_OXYMETER_OXY2_POS //260
+
+#define UART_SEND_BUFFER_SIZE STATUS_CHECK_OXY2_POS + 1 //266
+#define UART_SEND_TOTAL_SIZE UART_SEND_BUFFER_SIZE + CHECK_SUM_SIZE //270
 
 #define UART_READ_BUFFER_SIZE 256
 
@@ -169,6 +171,10 @@ public:
 		static bool verde_desconectado;
 		static bool AD8232_encendido;
 		static bool AD8232_orden_encender;
+		
+		static std::uint32_t ekg_data_size;
+		static std::uint32_t oxy_data_size;
+		static std::uint32_t SPO2_BPM_PI_data_size;
 
     static std::uint8_t write_buff[UART_SEND_TOTAL_SIZE];
 
@@ -242,7 +248,7 @@ private:
 
     eVirtualTimer timer_timer_leds;
 
-    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 20000;  ///Led azul
+    static const std::uint32_t TIMER_timer_leds_PERIOD_MS = 5000;  ///Led azul
 
     eVirtualTimer timer_timer_ADC;
 
