@@ -72,9 +72,9 @@
 //#define HEADER_END_POS 160
 
 //#define CURRENT_OXYMETER_OXY1_POS DATA_INIT_BUFFER_POS+1 //3
-#define STATUS_CHECK_ADC_0 DATA_GRAPH_FT_2_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //262 ----------Enviar aqui status de electrodos -------------------
-#define STATUS_CHECK_ADC_1 STATUS_CHECK_ADC_0 + 1 //263
-#define STATUS_CHECK_OXY1_POS STATUS_CHECK_ADC_1 + 1//264
+#define STATUS_CHECK_ADC DATA_GRAPH_FT_2_INIT_BUFFER_POS+FUNCTION_BUFFER_SIZE //262 ----------Enviar aqui status de electrodos -------------------
+#define STATUS_CHECK_BEAT STATUS_CHECK_ADC + 1 //263
+#define STATUS_CHECK_OXY1_POS STATUS_CHECK_BEAT + 1//264
 #define STATUS_CHECK_OXY2_POS STATUS_CHECK_OXY1_POS+1 //265
 
 //#define CURRENT_OXYMETER_OXY2_POS DATA_GRAPH_FT_INIT_BUFFER_POS+(FUNCTION_BUFFER_SIZE*2) //260
@@ -155,6 +155,8 @@ public:
     ////Main function, this function is executed infinitely when app.exec() in main.cpp
     virtual void userLoop() E_DECLARE_OVERRIDE;
 
+		static BUFFER_StateTypeDef buffer_transmit;
+		
     static bool CH0_Ready;
     static bool CH0_init_Ready;
     static bool CH1_Ready;
@@ -264,8 +266,6 @@ private:
 
     static void thread_Process_CH0Run(eObject::eThread &thread);
     /*End of User declare thread objects functions*/
-
-    static BUFFER_StateTypeDef buffer_transmit;
 
     uint32_t crc32(const void *buf, size_t size);
 

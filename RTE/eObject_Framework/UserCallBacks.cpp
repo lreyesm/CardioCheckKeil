@@ -88,6 +88,12 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     }
 		if(huart->Instance == USART6){
         //Main_Thread::instance().thread_Process_CH1.eventSet(Main_Thread::INIT_PROCESS_CH1_FULL);
+			  if(Main_Thread::instance().buffer_transmit == Main_Thread::BUFFER_TRANSMIT_0){
+			  	  Main_Thread::instance().transmit_buffer_0[STATUS_CHECK_BEAT] = 0x0FF;
+				}
+				else{
+			  	  Main_Thread::instance().transmit_buffer_1[STATUS_CHECK_BEAT] = 0x0FF;
+				}
     }
 }
 

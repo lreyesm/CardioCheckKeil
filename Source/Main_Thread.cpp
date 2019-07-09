@@ -514,8 +514,10 @@ bool Main_Thread::change_places(uint32_t pos, uint32_t last_pos, uint32_t max_le
 bool Main_Thread::save_pacient_data_to_database(void){
 
 	  std::uint8_t prom_values[60];
+	  std::uint8_t size_values[30];
 	
-	  memcpy(prom_values, &save_to_SD_buffer_0[DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS], 60);
+	  memcpy(prom_values, &save_to_SD_buffer_0[DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS], 42);
+	  memcpy(size_values, &save_to_SD_buffer_0[DESPLAZAMIENTO_EN_ENVIO_DE_PROMEDIOS+42], 28); //valores de posicion en archivo y cantidad de datos
 	
 	
     file = fopen ("M:\\pacient_data_temp.dat","r");
@@ -578,6 +580,8 @@ bool Main_Thread::save_pacient_data_to_database(void){
 					  
             HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
 
+            fwrite(size_values, sizeof (uint8_t), 28, file);
+						
             fwrite(&save_to_SD_buffer_0[0],sizeof (uint8_t),size_of_save_to_SD_buffer_0,file);
 
             //Para el caso de tamaños fijos descomentar estas 2 lineas
@@ -1726,21 +1730,20 @@ void Main_Thread::userLoop()
 
 										if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
 										
-										  transmit_buffer_0[STATUS_CHECK_ADC_0] = 1;
-										  transmit_buffer_0[STATUS_CHECK_ADC_1] = 1;											
+										  transmit_buffer_0[STATUS_CHECK_ADC] = 3;
+											
 										}
 										else if(verde_desconectado){
 											
-										  transmit_buffer_0[STATUS_CHECK_ADC_1] = 1;
+										  transmit_buffer_0[STATUS_CHECK_ADC] = 1;
 										}
 										else if(rojo_desconectado){
 											
-											transmit_buffer_0[STATUS_CHECK_ADC_0] = 1;
+											transmit_buffer_0[STATUS_CHECK_ADC] = 2;
 										}
 										else{
 											
-											transmit_buffer_0[STATUS_CHECK_ADC_0] = 0;
-										  transmit_buffer_0[STATUS_CHECK_ADC_1] = 0;
+											transmit_buffer_0[STATUS_CHECK_ADC] = 0;
 										}	
 										
 										//-----------------------------------------------------------------------------------------------------------------------------
@@ -1802,21 +1805,20 @@ void Main_Thread::userLoop()
 										//-----------------------------------------------------------------------------------------------------------------------
                     if(amarillo_desconectado){  //Cambiar luego esto modificando el buffer de transmision
 										
-										  transmit_buffer_1[STATUS_CHECK_ADC_0] = 1;
-										  transmit_buffer_1[STATUS_CHECK_ADC_1] = 1;											
+										  transmit_buffer_1[STATUS_CHECK_ADC] = 3;
+										  										
 										}
 										else if(verde_desconectado){
 											
-										  transmit_buffer_1[STATUS_CHECK_ADC_1] = 1;
+										  transmit_buffer_1[STATUS_CHECK_ADC] = 1;
 										}
 										else if(rojo_desconectado){
 											
-											transmit_buffer_1[STATUS_CHECK_ADC_0] = 1;
+											transmit_buffer_1[STATUS_CHECK_ADC] = 2;
 										}
 										else{
 											
-											transmit_buffer_1[STATUS_CHECK_ADC_0] = 0;
-										  transmit_buffer_1[STATUS_CHECK_ADC_1] = 0;
+											transmit_buffer_1[STATUS_CHECK_ADC] = 0;
 										}	
 								
 										//-----------------------------------------------------------------------------------------------------------------------------
@@ -1840,7 +1842,7 @@ void Main_Thread::userLoop()
                             save_to_file_pacient_signals(250);
                         }
                     }
-
+                    
                     buffer_transmit = BUFFER_TRANSMIT_0;
                 }
             }
@@ -1937,7 +1939,7 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
 									  primera_vuelta = true;
 								}
 							  
-								std::memcpy(save_to_SD_buffer_0, &read_buff[0], 60);
+								std::memcpy(save_to_SD_buffer_0, &read_buff[0], 80);
 							
                 Main_Thread::instance().eventSet(STOP_SAVING_TO_SD);
 
@@ -2127,6 +2129,18 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                     if(message_id == (uint8_t)0x09A){
 
                         Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_0[i + 3]);
+											 
+											  if((CH1_processsing_buffer_0[i + 4] & 0x010)== 0x010){ // 0001 0000 //bit del Beat pulse
+													
+											       if(buffer_transmit == BUFFER_TRANSMIT_0){
+															 
+													   	   transmit_buffer_1[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+													   }
+													   else if(buffer_transmit == BUFFER_TRANSMIT_1){
+															 
+													   	   transmit_buffer_0[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+												 	   }
+											  }
 
                         std::memcpy(&function_buffer_local[0], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
 
@@ -2184,6 +2198,19 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                     pendent =false;
                     std::uint8_t val = CH1_processsing_buffer_0[last_pendent_pos];
                     Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_0[last_pendent_pos]);
+									
+//									  if((CH1_processsing_buffer_0[last_pendent_pos+1] & 0x010)== 0x010){ // 0001 0000 //bit del Beat pulse
+//													
+//											       if(buffer_transmit == BUFFER_TRANSMIT_0){
+//															 
+//													   	   transmit_buffer_1[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//													   }
+//													   else if(buffer_transmit == BUFFER_TRANSMIT_1){
+//															 
+//													   	   transmit_buffer_0[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//												 	   }
+//										}
+
 
                     std::memcpy(&function_buffer_local[0], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
                     //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -2194,7 +2221,20 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
 
                     if(i+1< UART_READ_BUFFER_SIZE/2 ){
 
-                        Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_0[i+1]);
+//                        Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_0[i+1]);
+//											
+//											  if((CH1_processsing_buffer_0[i + 2] & 0x010)== 0x010){ // 0001 0000 //bit del Beat pulse
+//													
+//											       if(buffer_transmit == BUFFER_TRANSMIT_0){
+//															 
+//													   	   transmit_buffer_1[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//													   }
+//													   else if(buffer_transmit == BUFFER_TRANSMIT_1){
+//															 
+//													   	   transmit_buffer_0[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//												 	   }
+//											  }
+
 
                         std::memcpy(&function_buffer_local[0], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
                         continue;
@@ -2231,6 +2271,19 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                     if(message_id == (uint8_t)0x09A){
 
                         Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_1[i + 3]);
+											
+											  if((CH1_processsing_buffer_1[i + 4] & 0x010)== 0x010){ // 0001 0000 //bit del Beat pulse
+													
+											       if(buffer_transmit == BUFFER_TRANSMIT_0){
+															 
+													   	   transmit_buffer_1[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+													   }
+													   else if(buffer_transmit == BUFFER_TRANSMIT_1){
+															 
+													   	   transmit_buffer_0[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+												 	   }
+											  }
+
 
                         std::memcpy(&function_buffer_local[0], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
                         //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -2288,6 +2341,18 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                     std::uint8_t val = CH1_processsing_buffer_1[last_pendent_pos];
 
                     Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_1[last_pendent_pos]);
+//									  
+//									  if((CH1_processsing_buffer_1[last_pendent_pos +1] & 0x010)== 0x010){ // 0001 0000 //bit del Beat pulse
+//													
+//											       if(buffer_transmit == BUFFER_TRANSMIT_0){
+//															 
+//													   	   transmit_buffer_1[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//													   }
+//													   else if(buffer_transmit == BUFFER_TRANSMIT_1){
+//															 
+//													   	   transmit_buffer_0[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//												 	   }
+//										}
 
                     std::memcpy(&function_buffer_local[0], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
                     //Se salta el procesamiento de bytes hasta la siguiente cabecera (0x0FA)--------------------------------------------------
@@ -2299,6 +2364,19 @@ void Main_Thread::thread_Process_CH1Run(eObject::eThread &thread) //USART3
                     if(i+1< UART_READ_BUFFER_SIZE/2 ){
 
                         Main_Thread::instance().process_9A_buff_CH1(CH1_processsing_buffer_1[i+1]);
+											
+//											  if((CH1_processsing_buffer_1[i + 2] & 0x010)== 0x010){ // 0001 0000 //bit del Beat pulse
+//													
+//											       if(buffer_transmit == BUFFER_TRANSMIT_0){
+//															 
+//													   	   transmit_buffer_1[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//													   }
+//													   else if(buffer_transmit == BUFFER_TRANSMIT_1){
+//															 
+//													   	   transmit_buffer_0[STATUS_CHECK_BEAT] = CH1_buffer_pos;
+//												 	   }
+//											  }
+
 
                         std::memcpy(&function_buffer_local[0], (CH1_function_buffer_0), sizeof(CH1_function_buffer_0));
                         continue;
