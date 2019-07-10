@@ -221,6 +221,20 @@ void Main_Thread::process_9A_buff_CH0(std::uint8_t function_value){
     std::uint8_t local_function_value = function_value;
     CH0_function_buffer_0[CH0_buffer_pos] = function_value;
 
+		if(CH0_buffer_pos == 0){
+		
+			if(abs((float)(CH0_function_buffer_0[CH0_buffer_pos] - CH0_function_buffer_0[FUNCTION_BUFFER_SIZE-1])) > 20){
+			
+				  CH0_function_buffer_0[CH0_buffer_pos] = CH0_function_buffer_0[FUNCTION_BUFFER_SIZE-1];
+			}
+		}
+		else{
+			if(abs((float)(CH0_function_buffer_0[CH0_buffer_pos] - CH0_function_buffer_0[CH0_buffer_pos-1])) > 20){
+			
+				  CH0_function_buffer_0[CH0_buffer_pos] = CH0_function_buffer_0[CH0_buffer_pos-1];
+			}
+		
+		}
     if(CH0_function_buffer_0[CH0_buffer_pos] > 100){
         CH0_function_buffer_0[CH0_buffer_pos] = 0;
     }
@@ -260,6 +274,20 @@ void Main_Thread::process_9A_buff_CH1(std::uint8_t function_value){
     std::uint8_t local_function_value = function_value;
     CH1_function_buffer_0[CH1_buffer_pos] = function_value;
 
+	  if(CH1_buffer_pos == 0){
+		
+			if(abs((float)(CH1_function_buffer_0[CH1_buffer_pos] - CH1_function_buffer_0[FUNCTION_BUFFER_SIZE-1])) > 20){
+			
+				  CH1_function_buffer_0[CH1_buffer_pos] = CH1_function_buffer_0[FUNCTION_BUFFER_SIZE-1];
+			}
+		}
+		else{
+			if(abs((float)(CH1_function_buffer_0[CH1_buffer_pos] - CH1_function_buffer_0[CH1_buffer_pos-1])) > 20){
+			
+				  CH1_function_buffer_0[CH1_buffer_pos] = CH1_function_buffer_0[CH1_buffer_pos-1];
+			}
+		
+		}
     if(CH1_function_buffer_0[CH1_buffer_pos] > 100){
         CH1_function_buffer_0[CH1_buffer_pos] = 0;
     }
