@@ -101,7 +101,7 @@
 //#define TEST_LENGTH_SAMPLES  320
 #define SNR_THRESHOLD_F32    140.0f
 #define BLOCK_SIZE            ADC_BUFFER_SIZE
-#define NUM_TAPS              30 //Specific Order de filtro de Matlab + 1
+#define NUM_TAPS              32 //Specific Order de filtro de Matlab + 1
 
 using namespace eObject;
 
