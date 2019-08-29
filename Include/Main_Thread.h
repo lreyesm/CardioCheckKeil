@@ -83,7 +83,10 @@
 #define UART_SEND_BUFFER_SIZE STATUS_CHECK_OXY2_POS + 1 //266
 #define UART_SEND_TOTAL_SIZE UART_SEND_BUFFER_SIZE + CHECK_SUM_SIZE //270
 
-#define UART_READ_BUFFER_SIZE 256
+#define UART_READ_BUFFER_SIZE 256 ////tamaño de buffer de recibo de Oximetros
+#define UART_READ_BUFFER_SIZE_PC_ANDROID 350    //tamaño de buffer de recibo desde PC o Android
+#define UART_READ_INFO_PACIENT_SIZE_POS 4 //posicion de tamaño de informacion de paciente en buffer de lectura
+#define UART_READ_INFO_PACIENT_POS 6 //posicion de inicio de informacion de paciente en buffer de lectura
 
 #define MAX_TIME_RECORDING 300////en segundos (solo valores pares)
 #define DATA_FUNCTION_SIZE  (int)(FUNCTION_BUFFER_SIZE*MAX_TIME_RECORDING*2.5)  ////FUNCTION_BUFFER_SIZE * 150
@@ -183,11 +186,11 @@ public:
     static std::uint8_t CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
     static std::uint8_t CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
 
-    static std::uint8_t CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
-    static std::uint8_t save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
-    static std::uint8_t save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE  + 10];
+    static std::uint8_t CH3_read_buffer_0[UART_READ_BUFFER_SIZE_PC_ANDROID];
+    static std::uint8_t save_to_SD_buffer_0[UART_READ_BUFFER_SIZE_PC_ANDROID];
+    static std::uint8_t save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE_PC_ANDROID  + 10];
 
-    static std::uint8_t size_of_save_to_SD_buffer_0;
+    static std::uint16_t size_of_save_to_SD_buffer_0;
     static std::uint32_t function_value_pos_in_SD;
     static std::uint32_t HR_value_pos_in_SD;
 		static std::uint32_t SPO2_BPM_PI_value_pos_in_SD;

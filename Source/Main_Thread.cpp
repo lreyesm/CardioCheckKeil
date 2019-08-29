@@ -83,10 +83,10 @@ std::uint8_t Main_Thread::write_buff[UART_SEND_TOTAL_SIZE];
 std::uint8_t Main_Thread::CH0_read_buffer_0[UART_READ_BUFFER_SIZE];
 std::uint8_t Main_Thread::CH1_read_buffer_0[UART_READ_BUFFER_SIZE];
 
-std::uint8_t Main_Thread::CH3_read_buffer_0[UART_READ_BUFFER_SIZE];
-std::uint8_t Main_Thread::save_to_SD_buffer_0[UART_READ_BUFFER_SIZE];
-std::uint8_t Main_Thread::save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE + 10];
-std::uint8_t Main_Thread::size_of_save_to_SD_buffer_0 = 0;
+std::uint8_t Main_Thread::CH3_read_buffer_0[UART_READ_BUFFER_SIZE_PC_ANDROID];
+std::uint8_t Main_Thread::save_to_SD_buffer_0[UART_READ_BUFFER_SIZE_PC_ANDROID];
+std::uint8_t Main_Thread::save_to_SD_buffer_signals[UART_READ_BUFFER_SIZE_PC_ANDROID + 10];
+std::uint16_t Main_Thread::size_of_save_to_SD_buffer_0 = 0;
 std::uint32_t Main_Thread::function_value_pos_in_SD = 0;
 std::uint32_t Main_Thread::HR_value_pos_in_SD=0;
 std::uint32_t Main_Thread::SPO2_BPM_PI_value_pos_in_SD=0;
@@ -184,7 +184,7 @@ Main_Thread::Main_Thread():
     timer_timer_leds.start(TIMER_timer_leds_PERIOD_MS);
     int i=0;
 
-    for(i=0; i < UART_READ_BUFFER_SIZE + 10;++i){
+    for(i=0; i < UART_READ_BUFFER_SIZE_PC_ANDROID + 10;++i){
 
         Main_Thread::instance().save_to_SD_buffer_signals[i]=0;
 
@@ -204,7 +204,7 @@ Main_Thread::Main_Thread():
     process_Receive_Commands.start();
 
     //HAL_UART_Receive_DMA(&huart1, &CH2_read_buffer_0[0], 16);
-    HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], UART_READ_BUFFER_SIZE);
+    HAL_UART_Receive_DMA(&huart6, &CH3_read_buffer_0[0], UART_READ_BUFFER_SIZE_PC_ANDROID);
 
     thread_Process_CH0.start();
 
@@ -1941,8 +1941,8 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
     bool init_save_to_sd = true;
     bool stop_save_to_sd = true;
     bool retransmit = true;
-    std::uint8_t read_buff[UART_READ_BUFFER_SIZE], i;
-
+    std::uint8_t read_buff[UART_READ_BUFFER_SIZE_PC_ANDROID], i;
+    std::uint16_t size=0;
 
     while(true){
         eventWaitAny(signal, osWaitForever);
@@ -2041,8 +2041,9 @@ void Main_Thread::process_Receive_CommandsRun(eObject::eThread &thread)
             if(init){
 
                 HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
-                std::memcpy(save_to_SD_buffer_0, &read_buff[5], read_buff[4]);
-                size_of_save_to_SD_buffer_0 = read_buff[4];
+                size = (read_buff[UART_READ_INFO_PACIENT_SIZE_POS] << 8) | (read_buff[UART_READ_INFO_PACIENT_SIZE_POS+1]);
+							  size_of_save_to_SD_buffer_0 = size;
+							  std::memcpy(save_to_SD_buffer_0, &read_buff[UART_READ_INFO_PACIENT_POS], size_of_save_to_SD_buffer_0);
                 saving_to_sd = true;
                 Main_Thread::save_to_file_pacient_data();
                 Main_Thread::instance().eventSet(INIT_PROGRAM);
